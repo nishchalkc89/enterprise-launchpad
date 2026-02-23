@@ -1,6 +1,5 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import founderImg from "@/assets/founder.jpg";
 
 const aboutPoints = [
   "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
@@ -10,7 +9,7 @@ const aboutPoints = [
 ];
 
 const stats = [
-  { num: "10+", label: "Years Experience" },
+  { num: "26+", label: "Years Experience" },
   { num: "50+", label: "Contracts Delivered" },
   { num: "100%", label: "Client Satisfaction" },
   { num: "24/7", label: "Mission Support" },
@@ -40,9 +39,10 @@ const AboutSection = () => {
           </h2>
         </motion.div>
 
-        {/* Content Grid: Text+Stats left, Image right */}
+        {/* Content Grid */}
         <div className="grid lg:grid-cols-2 gap-10 items-center max-w-6xl mx-auto">
-          {/* Left Side */}
+
+          {/* LEFT SIDE */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
@@ -68,7 +68,7 @@ const AboutSection = () => {
               ))}
             </ul>
 
-            {/* 2x2 Stats Grid */}
+            {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
               {stats.map((stat, i) => (
                 <motion.div
@@ -78,10 +78,11 @@ const AboutSection = () => {
                   transition={{ delay: 0.4 + i * 0.1, duration: 0.5 }}
                   className="group relative rounded-2xl p-5 bg-card border border-border shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 text-center overflow-hidden"
                 >
-                  {/* Gradient border glow on hover */}
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  <div
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     style={{
-                      background: "linear-gradient(135deg, hsl(210 100% 52% / 0.15), hsl(200 100% 60% / 0.1))",
+                      background:
+                        "linear-gradient(135deg, hsl(210 100% 52% / 0.15), hsl(200 100% 60% / 0.1))",
                     }}
                   />
                   <div className="relative">
@@ -97,7 +98,7 @@ const AboutSection = () => {
             </div>
           </motion.div>
 
-          {/* Right Side: Founder Image */}
+          {/* RIGHT SIDE IMAGE */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
@@ -105,16 +106,17 @@ const AboutSection = () => {
             className="flex justify-center lg:justify-end"
           >
             <div className="relative">
-              {/* Glow behind image */}
               <div className="absolute -inset-4 rounded-3xl bg-blue-glow/10 blur-2xl opacity-60" />
+
               <img
-                src={founderImg}
-                alt="THINK Acquisition Leadership"
-                className="relative w-full max-w-md rounded-2xl shadow-[0_20px_60px_-15px_hsl(220_60%_18%/0.3)] object-cover"
+                src="/business.png"
+                alt="THINK Acquisition Business"
+                className="relative w-full max-w-md rounded-2xl shadow-[0_20px_60px_-15px_hsl(220_60%_18%/0.3)] object-contain"
                 loading="lazy"
               />
             </div>
           </motion.div>
+
         </div>
       </div>
     </section>

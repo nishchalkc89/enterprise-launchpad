@@ -1,28 +1,31 @@
 import { motion } from "framer-motion";
-import { Linkedin, Twitter, Facebook } from "lucide-react";
+import { Youtube, Linkedin } from "lucide-react";
 
 const socials = [
-  { icon: Linkedin, href: "#" },
-  { icon: Twitter, href: "#" },
-  { icon: Facebook, href: "#" },
+  { icon: Youtube, href: "https://www.youtube.com/channel/UCuYjdrI3TelR2tzZNEhRGOw" },
+  { icon: Linkedin, href: "https://www.linkedin.com/company/think-acquisition/about/" },
 ];
 
 const Footer = () => (
   <footer className="gradient-footer py-12">
     <div className="container mx-auto px-6">
-      <div className="grid md:grid-cols-3 gap-10 items-center">
-        <div>
-          <span className="font-display text-2xl font-bold text-primary-foreground">
-            THINK{" "}
-            <span className="text-blue-glow">Acquisition</span>
-          </span>
+      <div className="grid md:grid-cols-3 gap-10 items-center text-center md:text-left">
+
+        {/* LEFT */}
+        <div className="flex flex-col items-center md:items-start">
+          <img
+            src="/logo.png"
+            alt="THINK Acquisition Logo"
+            className="h-10 w-auto object-contain"
+          />
           <p className="text-primary-foreground/50 text-sm mt-3 max-w-xs">
             Service-Disabled Veteran-Owned Small Business delivering acquisition excellence.
           </p>
         </div>
 
-        <div className="text-center">
-          <div className="flex justify-center gap-4">
+        {/* CENTER SOCIALS */}
+        <div className="flex justify-center">
+          <div className="flex gap-4">
             {socials.map((s, i) => (
               <motion.a
                 key={i}
@@ -36,7 +39,8 @@ const Footer = () => (
           </div>
         </div>
 
-        <div className="text-right">
+        {/* RIGHT → CENTER ON MOBILE */}
+        <div className="text-center md:text-right">
           <p className="text-primary-foreground/40 text-sm">
             © {new Date().getFullYear()} THINK Acquisition LLC
           </p>
@@ -44,6 +48,7 @@ const Footer = () => (
             All rights reserved.
           </p>
         </div>
+
       </div>
     </div>
   </footer>

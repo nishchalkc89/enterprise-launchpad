@@ -29,20 +29,18 @@ const Navbar = () => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? "bg-primary/95 backdrop-blur-xl shadow-lg"
-          : "bg-transparent"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
+        ? "bg-primary/95 backdrop-blur-xl shadow-lg"
+        : "bg-transparent"
+        }`}
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <button onClick={() => handleClick("#home")} className="flex items-center gap-2">
-          <span className="font-display text-2xl font-bold text-primary-foreground tracking-tight">
-            THINK
-          </span>
-          <span className="text-blue-glow font-display text-sm font-medium tracking-widest uppercase">
-            Acquisition
-          </span>
+        <button onClick={() => handleClick("#home")} className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="THINK Acquisition Logo"
+            className="h-10 w-auto object-contain"
+          />
         </button>
 
         {/* Desktop Nav */}
