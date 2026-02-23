@@ -7,7 +7,7 @@ const socials = [
 ];
 
 const Footer = () => (
-  <footer className="gradient-footer py-12">
+  <footer className="py-12 bg-[#1E3A8A]">
     <div className="container mx-auto px-6">
       <div className="grid md:grid-cols-3 gap-10 items-center text-center md:text-left">
 
@@ -18,7 +18,7 @@ const Footer = () => (
             alt="THINK Acquisition Logo"
             className="h-10 w-auto object-contain"
           />
-          <p className="text-primary-foreground/50 text-sm mt-3 max-w-xs">
+          <p className="text-white/70 text-sm mt-3 max-w-xs">
             Service-Disabled Veteran-Owned Small Business delivering acquisition excellence.
           </p>
         </div>
@@ -31,7 +31,7 @@ const Footer = () => (
                 key={i}
                 href={s.href}
                 whileHover={{ scale: 1.15 }}
-                className="w-10 h-10 rounded-full glass flex items-center justify-center text-primary-foreground/60 hover:text-blue-glow hover:shadow-glow transition-all duration-300"
+                className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/70 hover:text-yellow-400 transition-all duration-300"
               >
                 <s.icon size={18} />
               </motion.a>
@@ -41,10 +41,10 @@ const Footer = () => (
 
         {/* RIGHT → CENTER ON MOBILE */}
         <div className="text-center md:text-right">
-          <p className="text-primary-foreground/40 text-sm">
+          <p className="text-white/60 text-sm">
             © {new Date().getFullYear()} THINK Acquisition LLC
           </p>
-          <p className="text-primary-foreground/30 text-xs mt-1">
+          <p className="text-white/40 text-xs mt-1">
             All rights reserved.
           </p>
         </div>

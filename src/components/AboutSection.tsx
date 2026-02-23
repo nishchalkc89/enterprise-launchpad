@@ -20,7 +20,7 @@ const AboutSection = () => {
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="about" className="relative py-16 bg-background overflow-hidden">
+    <section id="about" className="relative py-16 bg-background overflow-hidden scroll-mt-24">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       <div className="container mx-auto px-6" ref={ref}>
@@ -31,7 +31,7 @@ const AboutSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <span className="text-blue-glow text-sm font-semibold tracking-widest uppercase">
+          <span className="text-yellow-400 text-sm font-semibold tracking-widest uppercase">
             About Us
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 mb-4">
@@ -62,7 +62,7 @@ const AboutSection = () => {
                   key={point}
                   className="flex items-start gap-3 text-foreground/80 text-sm"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-glow mt-2 flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-2 flex-shrink-0" />
                   {point}
                 </li>
               ))}
@@ -82,11 +82,11 @@ const AboutSection = () => {
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     style={{
                       background:
-                        "linear-gradient(135deg, hsl(210 100% 52% / 0.15), hsl(200 100% 60% / 0.1))",
+                        "linear-gradient(135deg, hsl(45 100% 52% / 0.15), hsl(45 100% 60% / 0.1))",
                     }}
                   />
                   <div className="relative">
-                    <div className="font-display text-3xl font-bold gradient-text mb-1">
+                    <div className="font-display text-3xl font-bold text-yellow-400 mb-1">
                       {stat.num}
                     </div>
                     <div className="text-muted-foreground text-xs font-medium">
@@ -106,12 +106,12 @@ const AboutSection = () => {
             className="flex justify-center lg:justify-end"
           >
             <div className="relative">
-              <div className="absolute -inset-4 rounded-3xl bg-blue-glow/10 blur-2xl opacity-60" />
+              <div className="absolute -inset-4 rounded-3xl bg-yellow-400/10 blur-2xl opacity-60" />
 
               <img
                 src="/business.png"
                 alt="THINK Acquisition Business"
-                className="relative w-full max-w-md rounded-2xl shadow-[0_20px_60px_-15px_hsl(220_60%_18%/0.3)] object-contain"
+                className="relative w-full max-w-md rounded-2xl shadow-[0_20px_60px_-15px_hsl(45_60%_18%/0.3)] object-contain"
                 loading="lazy"
               />
             </div>

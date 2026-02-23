@@ -1,44 +1,47 @@
-const express = require('express');
-const nodemailer = require('nodemailer');
-const Submission = require('../models/Submission');
+const express = require("express");
 const router = express.Router();
+const nodemailer = require("nodemailer");
+const Submission = require("../models/Submission");
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT),
-  secure: false,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
-
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
-    if (!name || !email || !message) {
-      return res.status(400).json({ error: 'Name, email, and message are required' });
-    }
 
-    const submission = await Submission.create({ name, email, phone, message });
+    console.log("Incoming form:", req.body);
 
-    const html = `
-      <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
-      <p><strong>Message:</strong> ${message}</p>
-      <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-    `;
+    // Save to MongoDB
+    await Submission.create({ name, email, phone, message });
 
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: `${process.env.NOTIFY_EMAIL_1}, ${process.env.NOTIFY_EMAIL_2}`,
-      subject: `THINK Acquisition - New Contact: ${name}`,
-      html,
+    // Gmail SMTP Transporter
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
     });
 
-    res.status(201).json({ message: 'Submission received', id: submission._id });
+    // Send Mail
+    await transporter.sendMail({
+      from: `"THINK Acquisition Website" <${process.env.EMAIL_USER}>`,
+      to: "nishchalkc370@gmail.com, sanjibsulu@gmail.com",
+      subject: "New Contact Form Submission",
+      html: `
+        <h3>New Message Received</h3>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Phone:</b> ${phone}</p>
+        <p><b>Message:</b> ${message}</p>
+      `,
+    });
+
+    res.json({ success: true });
+
   } catch (err) {
-    console.error('Contact error:', err);
-    res.status(500).json({ error: 'Failed to process submission' });
+    console.error("CONTACT ERROR:", err); // 🔴 IMPORTANT
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -8,7 +8,6 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
   Eye,
   EyeOff,
   Save,
@@ -25,54 +24,146 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, POST to /api/admin/login with JWT
     if (email && password) onLogin();
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center px-6">
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f1f5f9",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "0 24px",
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md glass rounded-2xl p-10"
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          background: "#1E3A8A",           /* ← BLUE CARD */
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 20,
+          padding: 40,
+          boxShadow: "0 8px 40px rgba(30,58,138,0.35)",
+        }}
       >
-        <h1 className="font-display text-3xl font-bold text-primary-foreground mb-2 text-center">
+        {/* Logo */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <img
+            src="/logo.png"
+            alt="THINK Acquisition"
+            style={{ height: 56, width: "auto", objectFit: "contain" }}
+          />
+        </div>
+
+        <h1
+          style={{
+            fontFamily: "Georgia, serif",
+            fontSize: 24,
+            fontWeight: 700,
+            color: "#ffffff",
+            textAlign: "center",
+            marginBottom: 4,
+          }}
+        >
           Admin Console
         </h1>
-        <p className="text-primary-foreground/50 text-sm text-center mb-8">
+        <p
+          style={{
+            color: "rgba(255,255,255,0.55)",
+            fontSize: 13,
+            textAlign: "center",
+            marginBottom: 32,
+          }}
+        >
           THINK Acquisition CMS
         </p>
-        <form onSubmit={handleSubmit} className="space-y-5">
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div>
-            <label className="text-primary-foreground/70 text-sm mb-1.5 block">Email</label>
+            <label style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, display: "block", marginBottom: 6, fontWeight: 500 }}>
+              Email
+            </label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-primary-foreground/5 border border-primary-foreground/10 text-primary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-glow/50"
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 10,
+                background: "rgba(255,255,255,0.10)",
+                border: "1px solid rgba(255,255,255,0.20)",
+                color: "#ffffff",
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
               placeholder="admin@thinkacquisition.net"
             />
           </div>
           <div>
-            <label className="text-primary-foreground/70 text-sm mb-1.5 block">Password</label>
-            <div className="relative">
+            <label style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, display: "block", marginBottom: 6, fontWeight: 500 }}>
+              Password
+            </label>
+            <div style={{ position: "relative" }}>
               <input
                 type={showPw ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-primary-foreground/5 border border-primary-foreground/10 text-primary-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-glow/50"
+                style={{
+                  width: "100%",
+                  padding: "12px 44px 12px 16px",
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(255,255,255,0.20)",
+                  color: "#ffffff",
+                  fontSize: 14,
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
                 placeholder="••••••••"
               />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/40">
+              <button
+                type="button"
+                onClick={() => setShowPw(!showPw)}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "rgba(255,255,255,0.55)",
+                  cursor: "pointer",
+                }}
+              >
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
           <button
             type="submit"
-            className="w-full py-3 rounded-xl gradient-accent text-accent-foreground font-semibold text-sm shadow-glow hover:shadow-[0_0_40px_hsl(210_100%_52%/0.5)] transition-all"
+            style={{
+              width: "100%",
+              padding: "13px",
+              borderRadius: 10,
+              background: "#facc15",
+              color: "#1E3A8A",
+              fontWeight: 700,
+              fontSize: 14,
+              border: "none",
+              cursor: "pointer",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#fbbf24")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#facc15")}
           >
             Sign In
           </button>
@@ -116,7 +207,7 @@ const DashboardPanel = () => (
         >
           <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">{stat.label}</p>
           <p className="font-display text-3xl font-bold text-foreground">{stat.value}</p>
-          <p className="text-blue-glow text-xs mt-1">{stat.change}</p>
+          <p className="text-blue-600 text-xs mt-1">{stat.change}</p>
         </motion.div>
       ))}
     </div>
@@ -150,7 +241,10 @@ const ContentPanel = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-2xl font-bold text-foreground">Content Manager</h2>
-        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg gradient-accent text-accent-foreground text-sm font-medium">
+        <button
+          style={{ background: "#facc15", color: "#1E3A8A" }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
+        >
           <Save size={14} /> Save All
         </button>
       </div>
@@ -160,7 +254,12 @@ const ContentPanel = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-foreground">{section.title}</h3>
-                <span className={`px-2 py-0.5 rounded-full text-xs ${section.visible ? "bg-blue-glow/10 text-blue-glow" : "bg-muted text-muted-foreground"}`}>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs ${section.visible
+                    ? "bg-blue-50 text-blue-600"
+                    : "bg-muted text-muted-foreground"
+                    }`}
+                >
                   {section.visible ? "Visible" : "Hidden"}
                 </span>
               </div>
@@ -184,7 +283,12 @@ const SubmissionsPanel = () => (
           <thead className="bg-muted/50">
             <tr>
               {["Name", "Email", "Phone", "Message", "Date", ""].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
+                <th
+                  key={h}
+                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -215,14 +319,20 @@ const MediaPanel = () => (
   <div>
     <div className="flex items-center justify-between mb-6">
       <h2 className="font-display text-2xl font-bold text-foreground">Media Library</h2>
-      <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg gradient-accent text-accent-foreground text-sm font-medium">
+      <button
+        style={{ background: "#facc15", color: "#1E3A8A" }}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
+      >
         <Plus size={14} /> Upload
       </button>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="aspect-square bg-muted rounded-xl border border-border flex items-center justify-center group hover:border-blue-glow/50 transition-colors cursor-pointer">
-          <Image size={32} className="text-muted-foreground/40 group-hover:text-blue-glow/60 transition-colors" />
+        <div
+          key={i}
+          className="aspect-square bg-muted rounded-xl border border-border flex items-center justify-center group hover:border-blue-400/50 transition-colors cursor-pointer"
+        >
+          <Image size={32} className="text-muted-foreground/40 group-hover:text-blue-400/60 transition-colors" />
         </div>
       ))}
     </div>
@@ -248,7 +358,10 @@ const SettingsPanel = () => (
           />
         </div>
       ))}
-      <button className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-accent text-accent-foreground font-semibold text-sm">
+      <button
+        style={{ background: "#facc15", color: "#1E3A8A" }}
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm"
+      >
         <Save size={14} /> Save Settings
       </button>
     </div>
@@ -270,54 +383,92 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static`}>
-        <div className="p-6 border-b border-sidebar-border">
-          <span className="font-display text-lg font-bold text-sidebar-foreground">
-            THINK <span className="text-sidebar-primary">Admin</span>
-          </span>
+      {/* ===== SIDEBAR — #1E3A8A ===== */}
+      <aside
+        style={{
+          background: "#1E3A8A",
+          borderRight: "1px solid rgba(255,255,255,0.10)",
+        }}
+        className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col transform transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0 lg:static`}
+      >
+        {/* Logo */}
+        <div
+          className="p-6"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.10)" }}
+        >
+          <img
+            src="/logo.png"
+            alt="THINK Acquisition Admin"
+            className="h-10 w-auto object-contain"
+          />
         </div>
-        <nav className="p-4 space-y-1">
+
+        {/* Nav links */}
+        <nav className="p-4 space-y-1 flex-1">
           {sidebarItems.map((item) => (
             <button
               key={item.key}
-              onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === item.key
-                ? "bg-sidebar-accent text-sidebar-primary"
-                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                }`}
+              onClick={() => {
+                setActiveTab(item.key);
+                setSidebarOpen(false);
+              }}
+              style={
+                activeTab === item.key
+                  ? { background: "rgba(250,204,21,0.18)", color: "#facc15" }
+                  : { background: "transparent", color: "rgba(255,255,255,0.60)" }
+              }
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-white/10 hover:!text-white"
             >
               <item.icon size={18} />
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border">
+
+        {/* Sign out */}
+        <div
+          className="p-4"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}
+        >
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm hover:bg-white/10 hover:!text-white transition-all"
           >
             <LogOut size={18} /> Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Overlay */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-foreground/20 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 bg-foreground/20 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* Main */}
+      {/* ===== MAIN — stays white/light ===== */}
       <main className="flex-1 min-h-screen">
         <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border px-6 py-4 flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-foreground">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden text-foreground"
+          >
             <Menu size={22} />
           </button>
-          <h1 className="font-display text-lg font-semibold text-foreground capitalize">{activeTab}</h1>
-          <div className="w-8 h-8 rounded-full gradient-accent flex items-center justify-center text-accent-foreground text-xs font-bold">
-            WR
+          <h1 className="font-display text-lg font-semibold text-foreground capitalize">
+            {activeTab}
+          </h1>
+          <div
+            style={{ background: "#facc15", color: "#1E3A8A" }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+          >
+            NK
           </div>
         </header>
+
         <div className="p-6 lg:p-10">
           <AnimatePresence mode="wait">
             <motion.div
@@ -339,7 +490,11 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 // ============ MAIN ============
 const Admin = () => {
   const [loggedIn, setLoggedIn] = useState(false);
-  return loggedIn ? <AdminDashboard onLogout={() => setLoggedIn(false)} /> : <AdminLogin onLogin={() => setLoggedIn(true)} />;
+  return loggedIn ? (
+    <AdminDashboard onLogout={() => setLoggedIn(false)} />
+  ) : (
+    <AdminLogin onLogin={() => setLoggedIn(true)} />
+  );
 };
 
 export default Admin;

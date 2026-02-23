@@ -53,7 +53,7 @@ const ServicesSection = () => {
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="services" className="relative py-16 bg-background overflow-hidden">
+    <section id="services" className="relative py-16 bg-background overflow-hidden scroll-mt-24">
       {/* Subtle top decoration */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
@@ -65,8 +65,8 @@ const ServicesSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <span className="text-blue-glow text-sm font-semibold tracking-widest uppercase">
-            What We Do
+          <span className="text-yellow-400 text-sm font-semibold tracking-widest uppercase">
+            What we Do
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 mb-4">
             Core Services & Capabilities
