@@ -8,7 +8,7 @@ const socials = [
 ];
 
 const Footer = () => (
-  <footer className="gradient-footer py-16">
+  <footer className="gradient-footer py-12">
     <div className="container mx-auto px-6">
       <div className="grid md:grid-cols-3 gap-10 items-center">
         <div>

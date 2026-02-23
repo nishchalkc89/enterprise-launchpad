@@ -48,19 +48,12 @@ const services = [
   },
 ];
 
-const aboutPoints = [
-  "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
-  "Proven track record with DoD and federal civilian agencies",
-  "CAGE: 89VE7 | UEI: M2M1NJSDFP3",
-  "Experienced team of acquisition professionals",
-];
-
 const ServicesSection = () => {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="services" className="relative py-24 bg-background overflow-hidden">
+    <section id="services" className="relative py-16 bg-background overflow-hidden">
       {/* Subtle top decoration */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
@@ -85,7 +78,7 @@ const ServicesSection = () => {
         </motion.div>
 
         {/* Services Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-24">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service, i) => (
             <motion.div
               key={service.title}
@@ -106,66 +99,6 @@ const ServicesSection = () => {
             </motion.div>
           ))}
         </div>
-
-        {/* About Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.6, duration: 0.7 }}
-          className="relative rounded-3xl overflow-hidden gradient-hero p-12 md:p-16"
-        >
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-blue-glow/10 blur-3xl" />
-          </div>
-          <div className="relative grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="text-blue-glow text-sm font-semibold tracking-widest uppercase">
-                About Us
-              </span>
-              <h3 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mt-3 mb-6">
-                Mission-Driven. Results-Oriented.
-              </h3>
-              <p className="text-primary-foreground/70 leading-relaxed mb-6">
-                THINK Acquisition is a Service-Disabled Veteran-Owned Small
-                Business dedicated to providing expert acquisition, program
-                management, and technical consulting services. We partner with
-                federal agencies to deliver efficient, compliant, and
-                high-quality solutions.
-              </p>
-              <ul className="space-y-3">
-                {aboutPoints.map((point) => (
-                  <li
-                    key={point}
-                    className="flex items-start gap-3 text-primary-foreground/80 text-sm"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-glow mt-2 flex-shrink-0" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { num: "10+", label: "Years Experience" },
-                { num: "50+", label: "Contracts Delivered" },
-                { num: "100%", label: "Client Satisfaction" },
-                { num: "24/7", label: "Mission Support" },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="glass rounded-2xl p-6 text-center hover:bg-primary-foreground/5 transition-colors"
-                >
-                  <div className="font-display text-3xl font-bold gradient-text mb-1">
-                    {stat.num}
-                  </div>
-                  <div className="text-primary-foreground/60 text-xs font-medium">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );
