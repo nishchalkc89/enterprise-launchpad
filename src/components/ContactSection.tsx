@@ -36,7 +36,7 @@ const ContactSection = () => {
   };
 
   return (
-    <section id="contact" className="relative py-24 bg-muted/50 overflow-hidden">
+    <section id="contact" className="relative py-16 bg-muted/50 overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       <div className="container mx-auto px-6" ref={ref}>
         <motion.div
