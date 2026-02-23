@@ -282,11 +282,10 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
             <button
               key={item.key}
               onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                activeTab === item.key
-                  ? "bg-sidebar-accent text-sidebar-primary"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === item.key
+                ? "bg-sidebar-accent text-sidebar-primary"
+                : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                }`}
             >
               <item.icon size={18} />
               {item.label}

@@ -1,22 +1,32 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
-const Admin = require('./models/Admin');
+require("dotenv").config();
+const mongoose = require("mongoose");
+const Admin = require("./models/Admin");
 
-async function seed() {
-  await mongoose.connect(process.env.MONGO_URI);
-  
-  const exists = await Admin.findOne({ email: process.env.ADMIN_EMAIL });
-  if (!exists) {
-    await Admin.create({
-      email: process.env.ADMIN_EMAIL,
-      password: process.env.ADMIN_PASSWORD,
+mongoose.connect(process.env.MONGO_URI)
+  .then(async () => {
+    console.log("MongoDB connected for seeding");
+
+    const existing = await Admin.findOne({ email: "admin@think.com" });
+    if (existing) {
+      console.log("Admin already exists");
+      process.exit();
+    }
+
+    // ❗ DO NOT HASH PASSWORD HERE
+    const admin = new Admin({
+      email: "admin@think.com",
+      password: "admin123",
     });
-    console.log('Admin user created');
-  } else {
-    console.log('Admin user already exists');
-  }
-  
-  await mongoose.disconnect();
-}
 
-seed().catch(console.error);
+    await admin.save();
+
+    console.log("✅ Admin created successfully");
+    console.log("Login Email: admin@think.com");
+    console.log("Login Password: admin123");
+
+    process.exit();
+  })
+  .catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
