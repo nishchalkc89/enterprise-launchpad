@@ -1,5 +1,6 @@
 import { motion, useInView } from "framer-motion";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   MapPin,
   Phone,
@@ -10,7 +11,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-const corporateData = [
+const defaultCorporateData = [
   { icon: User, label: "POC", value: "William Randolph" },
   { icon: Phone, label: "Phone", value: "(703) 819-6192" },
   { icon: Mail, label: "Email", value: "william@thinkacquisition.net" },
@@ -25,6 +26,23 @@ const ContactSection = () => {
   const inView = useInView(ref, { once: true, margin: "-100px" });
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [settings, setSettings] = useState<any>(null);
+  const [contactContent, setContactContent] = useState<any>(null);
+
+  useEffect(() => {
+    const load = () => {
+      apiFetch("/settings").then((data) => {
+        if (data && !data.error) setSettings(data);
+      }).catch(() => {});
+      apiFetch("/content").then((data) => {
+        const contact = data?.find((item: any) => item.sectionId === "contact");
+        if (contact) setContactContent(contact);
+      }).catch(() => {});
+    };
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +106,13 @@ const ContactSection = () => {
               </h3>
 
               <div className="space-y-5 mb-8">
-                {corporateData.map((item) => (
+                {(settings ? [
+                  { icon: User, label: "POC", value: settings.pocName || defaultCorporateData[0].value },
+                  { icon: Phone, label: "Phone", value: settings.phone || defaultCorporateData[1].value },
+                  { icon: Mail, label: "Email", value: settings.email || defaultCorporateData[2].value },
+                  { icon: Globe, label: "Website", value: "www.thinkacquisition.net" },
+                  { icon: MapPin, label: "Address", value: "25 Castle Haven Road, Hampton, VA 23666" },
+                ] : defaultCorporateData).map((item) => (
                   <div key={item.label} className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-yellow-400/10 flex items-center justify-center flex-shrink-0">
                       <item.icon size={18} className="text-yellow-400" />

@@ -17,10 +17,15 @@ const HeroSection = () => {
   const [heroData, setHeroData] = useState<any>(null);
 
   useEffect(() => {
-    apiFetch("/content").then((data) => {
-      const hero = data?.find((item: any) => item.id === "hero");
-      setHeroData(hero);
-    });
+    const loadContent = () => {
+      apiFetch("/content").then((data) => {
+        const hero = data?.find((item: any) => item.sectionId === "hero");
+        if (hero) setHeroData(hero);
+      }).catch(() => {});
+    };
+    loadContent();
+    const interval = setInterval(loadContent, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const { scrollYProgress } = useScroll({
@@ -97,7 +102,7 @@ const HeroSection = () => {
               transition={{ delay: 0.7, duration: 0.6 }}
               className="text-primary-foreground/70 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl"
             >
-              {heroData?.text ||
+              {heroData?.body ||
                 `THINK Acquisition delivers expert acquisition support, program
 management, and technical consulting services to federal agencies
 and defense organizations.`}
