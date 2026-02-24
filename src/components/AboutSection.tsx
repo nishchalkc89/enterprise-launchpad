@@ -2,14 +2,14 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 
-const aboutPoints = [
+const defaultBullets = [
   "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
   "Proven track record with DoD and federal civilian agencies",
   "CAGE: 89VE7 | UEI: M2M1NJSDFP3",
   "Experienced team of acquisition professionals",
 ];
 
-const stats = [
+const defaultStats = [
   { num: "26+", label: "Years Experience" },
   { num: "50+", label: "Contracts Delivered" },
   { num: "100%", label: "Client Satisfaction" },
@@ -23,15 +23,21 @@ const AboutSection = () => {
 
   useEffect(() => {
     const load = () => {
-      apiFetch("/content").then((data) => {
-        const about = data?.find((item: any) => item.sectionId === "about");
-        if (about) setContent(about);
+      apiFetch("/content/about").then((data) => {
+        if (data && !data.error) setContent(data);
       }).catch(() => {});
     };
     load();
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const meta = content?.metadata || {};
+  const title = content?.title || "Mission-Driven. Results-Oriented.";
+  const description = content?.body || meta.description || `THINK Acquisition is a Service-Disabled Veteran-Owned Small Business dedicated to providing expert acquisition, program management, and technical consulting services. We partner with federal agencies to deliver efficient, compliant, and high-quality solutions.`;
+  const bullets = meta.bullets && meta.bullets.length > 0 ? meta.bullets : defaultBullets;
+  const stats = meta.stats && meta.stats.length > 0 ? meta.stats : defaultStats;
+  const imageUrl = meta.imageUrl || "/business.png";
 
   return (
     <section id="about" className="relative py-16 bg-background overflow-hidden scroll-mt-24">
@@ -49,7 +55,7 @@ const AboutSection = () => {
             About Us
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 mb-4">
-            {content?.title || "Mission-Driven. Results-Oriented."}
+            {title}
           </h2>
         </motion.div>
 
@@ -63,15 +69,11 @@ const AboutSection = () => {
             transition={{ delay: 0.2, duration: 0.6 }}
           >
             <p className="text-muted-foreground leading-relaxed mb-6">
-              {content?.body || `THINK Acquisition is a Service-Disabled Veteran-Owned Small
-              Business dedicated to providing expert acquisition, program
-              management, and technical consulting services. We partner with
-              federal agencies to deliver efficient, compliant, and
-              high-quality solutions.`}
+              {description}
             </p>
 
             <ul className="space-y-3 mb-8">
-              {aboutPoints.map((point) => (
+              {bullets.map((point: string) => (
                 <li
                   key={point}
                   className="flex items-start gap-3 text-foreground/80 text-sm"
@@ -84,7 +86,7 @@ const AboutSection = () => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
-              {stats.map((stat, i) => (
+              {stats.map((stat: any, i: number) => (
                 <motion.div
                   key={stat.label}
                   initial={{ opacity: 0, y: 20 }}
@@ -101,7 +103,7 @@ const AboutSection = () => {
                   />
                   <div className="relative">
                     <div className="font-display text-3xl font-bold text-yellow-400 mb-1">
-                      {stat.num}
+                      {stat.num || stat.value}
                     </div>
                     <div className="text-muted-foreground text-xs font-medium">
                       {stat.label}
@@ -123,7 +125,7 @@ const AboutSection = () => {
               <div className="absolute -inset-4 rounded-3xl bg-yellow-400/10 blur-2xl opacity-60" />
 
               <img
-                src="/business.png"
+                src={imageUrl}
                 alt="THINK Acquisition Business"
                 className="relative w-full max-w-md rounded-2xl shadow-[0_20px_60px_-15px_hsl(45_60%_18%/0.3)] object-contain"
                 loading="lazy"

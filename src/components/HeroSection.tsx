@@ -4,7 +4,7 @@ import { ArrowRight, Shield, Target, Zap } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { apiFetch } from "@/lib/api";
 
-const highlights = [
+const defaultHighlights = [
   { icon: Shield, label: "Government Cleared" },
   { icon: Target, label: "Mission Focused" },
   { icon: Zap, label: "Rapid Delivery" },
@@ -12,15 +12,12 @@ const highlights = [
 
 const HeroSection = () => {
   const ref = useRef<HTMLDivElement>(null);
-
-  // ✅ CMS DATA (from admin panel)
   const [heroData, setHeroData] = useState<any>(null);
 
   useEffect(() => {
     const loadContent = () => {
-      apiFetch("/content").then((data) => {
-        const hero = data?.find((item: any) => item.sectionId === "hero");
-        if (hero) setHeroData(hero);
+      apiFetch("/content/hero").then((data) => {
+        if (data && !data.error) setHeroData(data);
       }).catch(() => {});
     };
     loadContent();
@@ -39,6 +36,20 @@ const HeroSection = () => {
   const scrollToContact = () => {
     document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const meta = heroData?.metadata || {};
+  const badgeText = meta.badgeText || "Government Contracting Excellence";
+  const headingLine1 = meta.headingLine1 || "Strategic Solutions.";
+  const headingHighlight = meta.headingHighlight || "Proven Results.";
+  const paragraph = heroData?.body || meta.paragraph || `THINK Acquisition delivers expert acquisition support, program management, and technical consulting services to federal agencies and defense organizations.`;
+  const buttonPrimaryText = meta.buttonPrimaryText || "Get Started";
+  const buttonSecondaryText = meta.buttonSecondaryText || "Our Services";
+  const videoUrl = meta.videoUrl || "https://www.youtube.com/embed/rdJ38az0U0A?autoplay=1&mute=1&loop=1&playlist=rdJ38az0U0A&controls=1&modestbranding=1";
+  const badges = meta.badges && meta.badges.length > 0 ? meta.badges : defaultHighlights.map(h => h.label);
+
+  // Map badge labels to icons
+  const iconMap: Record<string, any> = { "Government Cleared": Shield, "Mission Focused": Target, "Rapid Delivery": Zap };
+  const highlights = badges.map((b: string) => ({ icon: iconMap[b] || Shield, label: b }));
 
   return (
     <section
@@ -76,36 +87,27 @@ const HeroSection = () => {
             >
               <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
               <span className="text-primary-foreground/80 text-sm font-medium tracking-wide">
-                Government Contracting Excellence
+                {badgeText}
               </span>
             </motion.div>
 
-            {/* ✅ TITLE NOW FROM ADMIN */}
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.7 }}
               className="font-display text-5xl md:text-7xl font-bold text-primary-foreground leading-tight mb-6"
             >
-              {heroData?.title || (
-                <>
-                  Strategic Solutions.{" "}
-                  <span className="text-yellow-400">Proven Results.</span>
-                </>
-              )}
+              {headingLine1}{" "}
+              <span className="text-yellow-400">{headingHighlight}</span>
             </motion.h1>
 
-            {/* ✅ DESCRIPTION NOW FROM ADMIN */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7, duration: 0.6 }}
               className="text-primary-foreground/70 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl"
             >
-              {heroData?.body ||
-                `THINK Acquisition delivers expert acquisition support, program
-management, and technical consulting services to federal agencies
-and defense organizations.`}
+              {paragraph}
             </motion.p>
 
             {/* BUTTONS */}
@@ -119,7 +121,7 @@ and defense organizations.`}
                 onClick={scrollToContact}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-yellow-400 text-black font-semibold text-sm tracking-wide shadow-lg hover:bg-yellow-300 transition-all duration-300"
               >
-                Get Started
+                {buttonPrimaryText}
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
 
@@ -129,13 +131,13 @@ and defense organizations.`}
                 }
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-lg glass text-primary-foreground font-semibold text-sm tracking-wide hover:bg-primary-foreground/10 transition-all duration-300"
               >
-                Our Services
+                {buttonSecondaryText}
               </button>
             </motion.div>
 
             {/* HIGHLIGHTS */}
             <motion.div className="flex flex-wrap gap-6">
-              {highlights.map((item, i) => (
+              {highlights.map((item: any, i: number) => (
                 <motion.div
                   key={item.label}
                   initial={{ opacity: 0, x: -20 }}
@@ -162,7 +164,7 @@ and defense organizations.`}
 
               <iframe
                 className="relative w-full h-[360px] md:h-[420px] lg:h-[460px]"
-                src="https://www.youtube.com/embed/rdJ38az0U0A?autoplay=1&mute=1&loop=1&playlist=rdJ38az0U0A&controls=1&modestbranding=1"
+                src={videoUrl}
                 title="THINK Acquisition Video"
                 allow="autoplay; encrypted-media"
                 allowFullScreen

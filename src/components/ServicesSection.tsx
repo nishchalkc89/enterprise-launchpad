@@ -8,63 +8,48 @@ import {
   Users,
   Settings,
   ShieldCheck,
+  Star,
 } from "lucide-react";
 
-const services = [
-  {
-    icon: Briefcase,
-    title: "Acquisition Support",
-    description:
-      "End-to-end acquisition lifecycle support including market research, requirements development, solicitation preparation, and contract administration.",
-  },
-  {
-    icon: FileText,
-    title: "Program Management",
-    description:
-      "Comprehensive program and project management services ensuring on-time, on-budget delivery of complex government initiatives.",
-  },
-  {
-    icon: BarChart3,
-    title: "Financial Management",
-    description:
-      "Budget analysis, financial reporting, cost estimation, and fiscal planning for federal programs and defense contracts.",
-  },
-  {
-    icon: Users,
-    title: "Staff Augmentation",
-    description:
-      "Highly qualified professionals to supplement your workforce with cleared and credentialed acquisition specialists.",
-  },
-  {
-    icon: Settings,
-    title: "Technical Consulting",
-    description:
-      "Engineering, logistics, and technical advisory services supporting weapon systems, IT modernization, and infrastructure projects.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Compliance & Oversight",
-    description:
-      "Regulatory compliance, quality assurance, and oversight services to maintain standards across all federal contracting activities.",
-  },
+const iconMap: Record<string, any> = {
+  Briefcase, FileText, BarChart3, Users, Settings, ShieldCheck, Star,
+};
+
+const fallbackServices = [
+  { icon: "Briefcase", title: "Acquisition Support", description: "End-to-end acquisition lifecycle support including market research, requirements development, solicitation preparation, and contract administration." },
+  { icon: "FileText", title: "Program Management", description: "Comprehensive program and project management services ensuring on-time, on-budget delivery of complex government initiatives." },
+  { icon: "BarChart3", title: "Financial Management", description: "Budget analysis, financial reporting, cost estimation, and fiscal planning for federal programs and defense contracts." },
+  { icon: "Users", title: "Staff Augmentation", description: "Highly qualified professionals to supplement your workforce with cleared and credentialed acquisition specialists." },
+  { icon: "Settings", title: "Technical Consulting", description: "Engineering, logistics, and technical advisory services supporting weapon systems, IT modernization, and infrastructure projects." },
+  { icon: "ShieldCheck", title: "Compliance & Oversight", description: "Regulatory compliance, quality assurance, and oversight services to maintain standards across all federal contracting activities." },
 ];
 
 const ServicesSection = () => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const [content, setContent] = useState<any>(null);
+  const [servicesList, setServicesList] = useState<any[]>([]);
 
   useEffect(() => {
     const load = () => {
-      apiFetch("/content").then((data) => {
-        const svc = data?.find((item: any) => item.sectionId === "services");
-        if (svc) setContent(svc);
+      // Load section header content
+      apiFetch("/content/services").then((data) => {
+        if (data && !data.error) setContent(data);
+      }).catch(() => {});
+
+      // Load dynamic services from /api/services
+      apiFetch("/services").then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setServicesList(data);
+        }
       }).catch(() => {});
     };
     load();
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const displayServices = servicesList.length > 0 ? servicesList : fallbackServices;
 
   return (
     <section id="services" className="relative py-16 bg-background overflow-hidden scroll-mt-24">
@@ -92,25 +77,28 @@ const ServicesSection = () => {
 
         {/* Services Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service, i) => (
-            <motion.div
-              key={service.title}
-              initial={{ opacity: 0, y: 30 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.1 + i * 0.1, duration: 0.5 }}
-              className="group relative p-8 rounded-2xl bg-card border border-border shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-400"
-            >
-              <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center mb-5 group-hover:shadow-glow transition-shadow duration-300">
-                <service.icon size={22} className="text-accent-foreground" />
-              </div>
-              <h3 className="font-display text-xl font-semibold text-card-foreground mb-3">
-                {service.title}
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {service.description}
-              </p>
-            </motion.div>
-          ))}
+          {displayServices.map((service: any, i: number) => {
+            const IconComp = iconMap[service.icon] || Briefcase;
+            return (
+              <motion.div
+                key={service._id || service.title}
+                initial={{ opacity: 0, y: 30 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.1 + i * 0.1, duration: 0.5 }}
+                className="group relative p-8 rounded-2xl bg-card border border-border shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-400"
+              >
+                <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center mb-5 group-hover:shadow-glow transition-shadow duration-300">
+                  <IconComp size={22} className="text-accent-foreground" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-card-foreground mb-3">
+                  {service.title}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {service.description}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>
