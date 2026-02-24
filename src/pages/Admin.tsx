@@ -209,12 +209,7 @@ const sidebarItems = [
   { icon: Settings, label: "Settings", key: "settings" },
 ];
 
-// ============ MOCK DATA ============
-const mockSubmissions = [
-  { id: 1, name: "Jane Smith", email: "jane@example.com", phone: "(555) 111-2222", message: "Interested in acquisition support services.", date: "2026-02-22" },
-  { id: 2, name: "Robert Johnson", email: "robert@gov.mil", phone: "(555) 333-4444", message: "Need staff augmentation for upcoming contract.", date: "2026-02-21" },
-  { id: 3, name: "Sarah Williams", email: "sarah@agency.gov", phone: "(555) 555-6666", message: "Looking for program management consulting.", date: "2026-02-20" },
-];
+// ============ DASHBOARD ============
 
 // ============ DASHBOARD ============
 
@@ -484,22 +479,51 @@ const MediaPanel = () => {
 
   const [files, setFiles] = useState<any[]>([]);
 
-  // open file picker
-  const handleUpload = (e: any) => {
-    const selected = Array.from(e.target.files || []);
-
-    const mapped = selected.map((file: any) => ({
-      id: crypto.randomUUID(),
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-
-    setFiles(prev => [...prev, ...mapped]);
+  // Load media from backend
+  const loadMedia = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/media");
+      const data = await res.json();
+      setFiles(data || []);
+    } catch {}
   };
 
-  // remove image
-  const handleRemove = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
+  useEffect(() => {
+    loadMedia();
+    const interval = setInterval(loadMedia, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Upload to backend
+  const handleUpload = async (e: any) => {
+    const selected = Array.from(e.target.files || []) as File[];
+    for (const file of selected) {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        await fetch("http://localhost:5000/api/media", {
+          method: "POST",
+          headers: {
+            ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
+          },
+          body: formData,
+        });
+      } catch {}
+    }
+    loadMedia();
+  };
+
+  // Delete from backend
+  const handleRemove = async (id: string) => {
+    try {
+      await fetch(`http://localhost:5000/api/media/${id}`, {
+        method: "DELETE",
+        headers: {
+          ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
+        },
+      });
+    } catch {}
+    setFiles(prev => prev.filter(f => f._id !== id));
   };
 
   return (
@@ -531,17 +555,17 @@ const MediaPanel = () => {
         {/* Uploaded Images */}
         {files.map((item) => (
           <div
-            key={item.id}
+            key={item._id}
             className="relative aspect-square rounded-xl border border-border overflow-hidden group"
           >
             <img
-              src={item.preview}
+              src={`http://localhost:5000${item.url}`}
               className="w-full h-full object-cover"
             />
 
             {/* REMOVE BUTTON */}
             <button
-              onClick={() => handleRemove(item.id)}
+              onClick={() => handleRemove(item._id)}
               className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
             >
               <Trash2 size={14} />

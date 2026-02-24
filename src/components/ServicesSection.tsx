@@ -1,5 +1,6 @@
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   Briefcase,
   FileText,
@@ -51,6 +52,19 @@ const services = [
 const ServicesSection = () => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
+  const [content, setContent] = useState<any>(null);
+
+  useEffect(() => {
+    const load = () => {
+      apiFetch("/content").then((data) => {
+        const svc = data?.find((item: any) => item.sectionId === "services");
+        if (svc) setContent(svc);
+      }).catch(() => {});
+    };
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section id="services" className="relative py-16 bg-background overflow-hidden scroll-mt-24">
@@ -69,11 +83,10 @@ const ServicesSection = () => {
             What we Do
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 mb-4">
-            Core Services & Capabilities
+            {content?.title || "Core Services & Capabilities"}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Delivering mission-critical acquisition and consulting solutions
-            across the federal landscape.
+            {content?.body || "Delivering mission-critical acquisition and consulting solutions across the federal landscape."}
           </p>
         </motion.div>
 

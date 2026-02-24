@@ -1,5 +1,6 @@
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 
 const aboutPoints = [
   "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
@@ -18,6 +19,19 @@ const stats = [
 const AboutSection = () => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
+  const [content, setContent] = useState<any>(null);
+
+  useEffect(() => {
+    const load = () => {
+      apiFetch("/content").then((data) => {
+        const about = data?.find((item: any) => item.sectionId === "about");
+        if (about) setContent(about);
+      }).catch(() => {});
+    };
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section id="about" className="relative py-16 bg-background overflow-hidden scroll-mt-24">
@@ -35,7 +49,7 @@ const AboutSection = () => {
             About Us
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-3 mb-4">
-            Mission-Driven. Results-Oriented.
+            {content?.title || "Mission-Driven. Results-Oriented."}
           </h2>
         </motion.div>
 
@@ -49,11 +63,11 @@ const AboutSection = () => {
             transition={{ delay: 0.2, duration: 0.6 }}
           >
             <p className="text-muted-foreground leading-relaxed mb-6">
-              THINK Acquisition is a Service-Disabled Veteran-Owned Small
+              {content?.body || `THINK Acquisition is a Service-Disabled Veteran-Owned Small
               Business dedicated to providing expert acquisition, program
               management, and technical consulting services. We partner with
               federal agencies to deliver efficient, compliant, and
-              high-quality solutions.
+              high-quality solutions.`}
             </p>
 
             <ul className="space-y-3 mb-8">

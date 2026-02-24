@@ -11,6 +11,7 @@ const serviceRoutes = require('./routes/services');
 const uploadRoutes = require('./routes/upload');
 const submissionRoutes = require('./routes/submissions');
 const settingsRoutes = require('./routes/Settings');
+const mediaRoutes = require('./routes/media');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/media', mediaRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
