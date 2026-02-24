@@ -908,7 +908,38 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
 // ============ MAIN ============
 const Admin = () => {
-  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("token"));
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setChecking(false);
+      return;
+    }
+    // Validate token by calling a protected endpoint
+    apiFetch("/submissions")
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setLoggedIn(true);
+        } else {
+          localStorage.removeItem("token");
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+      })
+      .finally(() => setChecking(false));
+  }, []);
+
+  if (checking) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#64748b", fontSize: 14 }}>Verifying session…</p>
+      </div>
+    );
+  }
+
   return loggedIn ? (
     <AdminDashboard onLogout={() => {
       localStorage.removeItem("token");
