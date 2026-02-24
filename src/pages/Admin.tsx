@@ -297,68 +297,212 @@ const DashboardPanel = () => {
 
 // ============ CONTENT ============
 const ContentPanel = () => {
-
-  // 🔥 REAL DATA FROM BACKEND
   const [sections, setSections] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [servicesList, setServicesList] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  // LOAD CONTENTS FROM MONGODB
   useEffect(() => {
-
     const loadContent = () => {
       apiFetch("/content").then((data) => {
         setSections(data || []);
       });
+      apiFetch("/services").then((data) => {
+        if (Array.isArray(data)) setServicesList(data);
+      });
     };
-
     loadContent();
-
-    // 🔥 AUTO REFRESH EVERY 5s
     const interval = setInterval(loadContent, 5000);
-
     return () => clearInterval(interval);
-
   }, []);
 
   const openEditor = (section: any) => {
     setActiveSection(section);
-    setFormData(section);
+    setFormData({ ...section, metadata: { ...(section.metadata || {}) } });
+  };
+
+  const updateMeta = (key: string, value: any) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      metadata: { ...(prev.metadata || {}), [key]: value },
+    }));
   };
 
   const handleSave = async () => {
     if (!activeSection) return;
-
+    setSaving(true);
     const updated = await apiFetch(`/content/${activeSection._id}`, {
       method: "PUT",
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     });
-
-    setSections(prev =>
-      prev.map(s => s._id === updated._id ? updated : s)
-    );
-
+    setSections((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+    setSaving(false);
     setActiveSection(null);
+  };
+
+  // Services CRUD
+  const addService = async () => {
+    const svc = await apiFetch("/services", {
+      method: "POST",
+      body: JSON.stringify({ title: "New Service", description: "Description here", icon: "Briefcase" }),
+    });
+    setServicesList((prev) => [...prev, svc]);
+  };
+
+  const updateService = async (id: string, data: any) => {
+    const updated = await apiFetch(`/services/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    setServicesList((prev) => prev.map((s) => (s._id === id ? updated : s)));
+  };
+
+  const deleteService = async (id: string) => {
+    await apiFetch(`/services/${id}`, { method: "DELETE" });
+    setServicesList((prev) => prev.filter((s) => s._id !== id));
+  };
+
+  // ---- Section-specific field renderers ----
+  const renderHeroFields = () => {
+    const meta = formData.metadata || {};
+    return (
+      <>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Badge Text</label>
+        <input value={meta.badgeText || ""} onChange={(e) => updateMeta("badgeText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Government Contracting Excellence" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Heading Line 1</label>
+        <input value={meta.headingLine1 || ""} onChange={(e) => updateMeta("headingLine1", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Strategic Solutions." />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Heading Highlight</label>
+        <input value={meta.headingHighlight || ""} onChange={(e) => updateMeta("headingHighlight", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Proven Results." />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paragraph</label>
+        <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={3} />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Primary Button Text</label>
+        <input value={meta.buttonPrimaryText || ""} onChange={(e) => updateMeta("buttonPrimaryText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Secondary Button Text</label>
+        <input value={meta.buttonSecondaryText || ""} onChange={(e) => updateMeta("buttonSecondaryText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Video URL</label>
+        <input value={meta.videoUrl || ""} onChange={(e) => updateMeta("videoUrl", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="https://youtube.com/embed/..." />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Badges (comma separated)</label>
+        <input value={(meta.badges || []).join(", ")} onChange={(e) => updateMeta("badges", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Government Cleared, Mission Focused, Rapid Delivery" />
+      </>
+    );
+  };
+
+  const renderAboutFields = () => {
+    const meta = formData.metadata || {};
+    return (
+      <>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title</label>
+        <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</label>
+        <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={4} />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bullets (one per line)</label>
+        <textarea value={(meta.bullets || []).join("\n")} onChange={(e) => updateMeta("bullets", e.target.value.split("\n").filter(Boolean))} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={4} />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Image URL</label>
+        <input value={meta.imageUrl || ""} onChange={(e) => updateMeta("imageUrl", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="/business.png" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stats</label>
+        {(meta.stats || [{ num: "", label: "" }]).map((stat: any, i: number) => (
+          <div key={i} className="flex gap-2">
+            <input value={stat.num || stat.value || ""} onChange={(e) => { const s = [...(meta.stats || [])]; s[i] = { ...s[i], num: e.target.value }; updateMeta("stats", s); }} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Value (e.g. 26+)" />
+            <input value={stat.label || ""} onChange={(e) => { const s = [...(meta.stats || [])]; s[i] = { ...s[i], label: e.target.value }; updateMeta("stats", s); }} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Label" />
+            <button onClick={() => { const s = (meta.stats || []).filter((_: any, j: number) => j !== i); updateMeta("stats", s); }} className="text-red-500 text-xs px-2">✕</button>
+          </div>
+        ))}
+        <button onClick={() => updateMeta("stats", [...(meta.stats || []), { num: "", label: "" }])} className="text-xs text-blue-600 font-medium">+ Add Stat</button>
+      </>
+    );
+  };
+
+  const renderServicesFields = () => (
+    <>
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title</label>
+      <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Description</label>
+      <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={2} />
+      <div className="border-t border-border pt-4 mt-2">
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Service Cards</label>
+          <button onClick={addService} style={{ background: "#facc15", color: "#1E3A8A" }} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"><Plus size={12} /> Add Service</button>
+        </div>
+        <div className="space-y-3">
+          {servicesList.map((svc) => (
+            <div key={svc._id} className="p-4 rounded-xl bg-muted/50 border border-border space-y-2">
+              <div className="flex gap-2">
+                <input value={svc.title} onChange={(e) => updateService(svc._id, { ...svc, title: e.target.value })} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Title" />
+                <select value={svc.icon || "Briefcase"} onChange={(e) => updateService(svc._id, { ...svc, icon: e.target.value })} className="px-3 py-2 rounded-lg bg-muted border border-border text-sm">
+                  {["Briefcase", "FileText", "BarChart3", "Users", "Settings", "ShieldCheck", "Star"].map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+                </select>
+              </div>
+              <textarea value={svc.description} onChange={(e) => updateService(svc._id, { ...svc, description: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm" rows={2} />
+              <button onClick={() => deleteService(svc._id)} className="text-red-500 text-xs font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
+  const renderContactFields = () => {
+    const meta = formData.metadata || {};
+    return (
+      <>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">POC Name</label>
+        <input value={meta.pocName || ""} onChange={(e) => updateMeta("pocName", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Phone</label>
+        <input value={meta.phone || ""} onChange={(e) => updateMeta("phone", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</label>
+        <input value={meta.email || ""} onChange={(e) => updateMeta("email", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Website</label>
+        <input value={meta.website || ""} onChange={(e) => updateMeta("website", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Address</label>
+        <input value={meta.address || ""} onChange={(e) => updateMeta("address", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">CAGE Code</label>
+        <input value={meta.cage || ""} onChange={(e) => updateMeta("cage", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">UEI</label>
+        <input value={meta.uei || ""} onChange={(e) => updateMeta("uei", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Socio-Economic Status</label>
+        <input value={meta.socioEconomicStatus || ""} onChange={(e) => updateMeta("socioEconomicStatus", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">NAICS Codes (comma separated)</label>
+        <input value={(meta.naicsCodes || []).join(", ")} onChange={(e) => updateMeta("naicsCodes", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+      </>
+    );
+  };
+
+  const renderFields = () => {
+    if (!activeSection) return null;
+    const sid = activeSection.sectionId;
+    if (sid === "hero") return renderHeroFields();
+    if (sid === "about") return renderAboutFields();
+    if (sid === "services") return renderServicesFields();
+    if (sid === "contact") return renderContactFields();
+    // Generic fallback
+    return (
+      <>
+        <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Title" />
+        <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Content text" rows={4} />
+      </>
+    );
   };
 
   return (
     <div>
-
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-2xl font-bold text-foreground">
           Content Manager
         </h2>
-
-        <button
-          onClick={handleSave}
-          style={{ background: "#facc15", color: "#1E3A8A" }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
-        >
-          <Save size={14} /> Save All
-        </button>
+        {activeSection && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ background: "#facc15", color: "#1E3A8A" }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
+          >
+            <Save size={14} /> {saving ? "Saving..." : "Save"}
+          </button>
+        )}
       </div>
 
-      {/* ================= LIST VIEW ================= */}
+      {/* LIST VIEW */}
       {!activeSection && (
         <div className="space-y-4">
           {sections.map((section) => (
@@ -370,16 +514,14 @@ const ContentPanel = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <h3 className="font-semibold text-foreground">
-                    {section.title || section.id}
+                    {section.sectionId?.charAt(0).toUpperCase() + section.sectionId?.slice(1) || section.title}
                   </h3>
-
                   <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600">
-                    Visible
+                    {section.visible !== false ? "Visible" : "Hidden"}
                   </span>
                 </div>
                 <ChevronRight size={16} />
               </div>
-
               <p className="text-muted-foreground text-sm">
                 Click to edit section content, text, and images.
               </p>
@@ -388,31 +530,16 @@ const ContentPanel = () => {
         </div>
       )}
 
-      {/* ================= EDIT MODE ================= */}
+      {/* EDIT MODE */}
       {activeSection && (
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-
-          <button onClick={() => setActiveSection(null)} className="text-sm">
-            ← Back
+          <button onClick={() => setActiveSection(null)} className="text-sm text-muted-foreground hover:text-foreground">
+            ← Back to sections
           </button>
-
-          <input
-            value={formData.title || ""}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl bg-muted border border-border"
-            placeholder="Title"
-          />
-
-          <textarea
-            value={formData.text || ""}
-            onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl bg-muted border border-border"
-            placeholder="Content text"
-          />
-
+          <h3 className="font-display text-lg font-semibold text-foreground capitalize">{activeSection.sectionId} Section</h3>
+          {renderFields()}
         </div>
       )}
-
     </div>
   );
 };

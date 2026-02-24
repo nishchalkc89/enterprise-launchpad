@@ -11,32 +11,17 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-const defaultCorporateData = [
-  { icon: User, label: "POC", value: "William Randolph" },
-  { icon: Phone, label: "Phone", value: "(703) 819-6192" },
-  { icon: Mail, label: "Email", value: "william@thinkacquisition.net" },
-  { icon: Globe, label: "Website", value: "www.thinkacquisition.net" },
-  { icon: MapPin, label: "Address", value: "25 Castle Haven Road, Hampton, VA 23666" },
-];
-
-const naics = ["541611", "541612", "541614", "541618", "541690", "541990", "561110", "611430"];
-
 const ContactSection = () => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
-  const [settings, setSettings] = useState<any>(null);
-  const [contactContent, setContactContent] = useState<any>(null);
+  const [contactData, setContactData] = useState<any>(null);
 
   useEffect(() => {
     const load = () => {
-      apiFetch("/settings").then((data) => {
-        if (data && !data.error) setSettings(data);
-      }).catch(() => {});
-      apiFetch("/content").then((data) => {
-        const contact = data?.find((item: any) => item.sectionId === "contact");
-        if (contact) setContactContent(contact);
+      apiFetch("/content/contact").then((data) => {
+        if (data && !data.error) setContactData(data);
       }).catch(() => {});
     };
     load();
@@ -44,20 +29,33 @@ const ContactSection = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const meta = contactData?.metadata || {};
+  const pocName = meta.pocName || "William Randolph";
+  const phone = meta.phone || "(703) 819-6192";
+  const email = meta.email || "william@thinkacquisition.net";
+  const website = meta.website || "www.thinkacquisition.net";
+  const address = meta.address || "25 Castle Haven Road, Hampton, VA 23666";
+  const cage = meta.cage || "89VE7";
+  const uei = meta.uei || "M2M1NJSDFP3";
+  const socioEconomicStatus = meta.socioEconomicStatus || "Service-Disabled Veteran-Owned Small Business (SDVOSB)";
+  const naicsCodes = meta.naicsCodes && meta.naicsCodes.length > 0 ? meta.naicsCodes : ["541611", "541612", "541614", "541618", "541690", "541990", "561110", "611430"];
+
+  const corporateInfo = [
+    { icon: User, label: "POC", value: pocName },
+    { icon: Phone, label: "Phone", value: phone },
+    { icon: Mail, label: "Email", value: email },
+    { icon: Globe, label: "Website", value: website },
+    { icon: MapPin, label: "Address", value: address },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       const res = await fetch("http://localhost:5000/api/contact", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-
-      const data = await res.json();
-
       if (res.ok) {
         setSubmitted(true);
         setTimeout(() => setSubmitted(false), 4000);
@@ -99,20 +97,13 @@ const ContactSection = () => {
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ delay: 0.2, duration: 0.6 }}
           >
-            {/* 🔥 UPDATED BACKGROUND HERE */}
             <div className="rounded-2xl bg-[#1E3A8A] p-8 md:p-10 h-full">
               <h3 className="font-display text-2xl font-bold text-white mb-6">
                 Corporate Information
               </h3>
 
               <div className="space-y-5 mb-8">
-                {(settings ? [
-                  { icon: User, label: "POC", value: settings.pocName || defaultCorporateData[0].value },
-                  { icon: Phone, label: "Phone", value: settings.phone || defaultCorporateData[1].value },
-                  { icon: Mail, label: "Email", value: settings.email || defaultCorporateData[2].value },
-                  { icon: Globe, label: "Website", value: "www.thinkacquisition.net" },
-                  { icon: MapPin, label: "Address", value: "25 Castle Haven Road, Hampton, VA 23666" },
-                ] : defaultCorporateData).map((item) => (
+                {corporateInfo.map((item) => (
                   <div key={item.label} className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-yellow-400/10 flex items-center justify-center flex-shrink-0">
                       <item.icon size={18} className="text-yellow-400" />
@@ -133,11 +124,11 @@ const ContactSection = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-white/60 text-xs uppercase tracking-wider">CAGE</span>
-                    <p className="text-white font-semibold">89VE7</p>
+                    <p className="text-white font-semibold">{cage}</p>
                   </div>
                   <div>
                     <span className="text-white/60 text-xs uppercase tracking-wider">UEI</span>
-                    <p className="text-white font-semibold">M2M1NJSDFP3</p>
+                    <p className="text-white font-semibold">{uei}</p>
                   </div>
                 </div>
               </div>
@@ -147,7 +138,7 @@ const ContactSection = () => {
                   Socio-Economic Status
                 </span>
                 <p className="text-white text-sm mb-4">
-                  Service-Disabled Veteran-Owned Small Business (SDVOSB)
+                  {socioEconomicStatus}
                 </p>
 
                 <span className="text-white/60 text-xs uppercase tracking-wider block mb-2">
@@ -155,7 +146,7 @@ const ContactSection = () => {
                 </span>
 
                 <div className="flex flex-wrap gap-2">
-                  {naics.map((code) => (
+                  {naicsCodes.map((code: string) => (
                     <span key={code} className="px-3 py-1 rounded-full bg-yellow-400/10 text-yellow-400 text-xs font-medium">
                       {code}
                     </span>
