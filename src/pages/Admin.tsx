@@ -24,10 +24,28 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) onLogin();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await apiFetch("/admin/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.token) {
+        localStorage.setItem("token", res.token);
+        onLogin();
+      } else {
+        setError(res.error || "Invalid credentials");
+      }
+    } catch {
+      setError("Server unreachable. Is the backend running?");
+    }
+    setLoading(false);
   };
 
   return (
@@ -167,9 +185,15 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#fbbf24")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "#facc15")}
+            disabled={loading}
           >
-            Sign In
+            {loading ? "Signing In..." : "Sign In"}
           </button>
+          {error && (
+            <p style={{ color: "#f87171", fontSize: 13, textAlign: "center", marginTop: 4 }}>
+              {error}
+            </p>
+          )}
         </form>
       </motion.div>
     </div>
@@ -733,9 +757,12 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
 // ============ MAIN ============
 const Admin = () => {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("token"));
   return loggedIn ? (
-    <AdminDashboard onLogout={() => setLoggedIn(false)} />
+    <AdminDashboard onLogout={() => {
+      localStorage.removeItem("token");
+      setLoggedIn(false);
+    }} />
   ) : (
     <AdminLogin onLogin={() => setLoggedIn(true)} />
   );
