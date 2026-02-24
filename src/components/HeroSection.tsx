@@ -1,7 +1,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ArrowRight, Shield, Target, Zap } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
+import { apiFetch } from "@/lib/api";
 
 const highlights = [
   { icon: Shield, label: "Government Cleared" },
@@ -11,6 +12,16 @@ const highlights = [
 
 const HeroSection = () => {
   const ref = useRef<HTMLDivElement>(null);
+
+  // ✅ CMS DATA (from admin panel)
+  const [heroData, setHeroData] = useState<any>(null);
+
+  useEffect(() => {
+    apiFetch("/content").then((data) => {
+      const hero = data?.find((item: any) => item.id === "hero");
+      setHeroData(hero);
+    });
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -64,26 +75,32 @@ const HeroSection = () => {
               </span>
             </motion.div>
 
-            {/* TITLE */}
+            {/* ✅ TITLE NOW FROM ADMIN */}
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.7 }}
               className="font-display text-5xl md:text-7xl font-bold text-primary-foreground leading-tight mb-6"
             >
-              Strategic Solutions.{" "}
-              <span className="text-yellow-400">Proven Results.</span>
+              {heroData?.title || (
+                <>
+                  Strategic Solutions.{" "}
+                  <span className="text-yellow-400">Proven Results.</span>
+                </>
+              )}
             </motion.h1>
 
+            {/* ✅ DESCRIPTION NOW FROM ADMIN */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7, duration: 0.6 }}
               className="text-primary-foreground/70 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl"
             >
-              THINK Acquisition delivers expert acquisition support, program
-              management, and technical consulting services to federal agencies
-              and defense organizations.
+              {heroData?.text ||
+                `THINK Acquisition delivers expert acquisition support, program
+management, and technical consulting services to federal agencies
+and defense organizations.`}
             </motion.p>
 
             {/* BUTTONS */}
@@ -93,23 +110,17 @@ const HeroSection = () => {
               transition={{ delay: 0.9, duration: 0.6 }}
               className="flex flex-wrap gap-4 mb-16"
             >
-              {/* YELLOW BUTTON */}
               <button
                 onClick={scrollToContact}
                 className="group inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-yellow-400 text-black font-semibold text-sm tracking-wide shadow-lg hover:bg-yellow-300 transition-all duration-300"
               >
                 Get Started
-                <ArrowRight
-                  size={16}
-                  className="group-hover:translate-x-1 transition-transform"
-                />
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
 
               <button
                 onClick={() =>
-                  document
-                    .querySelector("#services")
-                    ?.scrollIntoView({ behavior: "smooth" })
+                  document.querySelector("#services")?.scrollIntoView({ behavior: "smooth" })
                 }
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-lg glass text-primary-foreground font-semibold text-sm tracking-wide hover:bg-primary-foreground/10 transition-all duration-300"
               >

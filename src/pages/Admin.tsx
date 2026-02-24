@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
+
+
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -190,118 +193,256 @@ const mockSubmissions = [
 ];
 
 // ============ DASHBOARD ============
-const DashboardPanel = () => (
-  <div>
-    <h2 className="font-display text-2xl font-bold text-foreground mb-6">Dashboard</h2>
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {[
-        { label: "Form Submissions", value: "23", change: "+5 this week" },
-        { label: "Page Views", value: "1,847", change: "+12% vs last month" },
-        { label: "Active Services", value: "6", change: "All visible" },
-        { label: "Media Files", value: "14", change: "2 GB used" },
-      ].map((stat) => (
-        <motion.div
-          key={stat.label}
-          whileHover={{ y: -2 }}
-          className="bg-card border border-border rounded-xl p-6 shadow-card"
-        >
-          <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">{stat.label}</p>
-          <p className="font-display text-3xl font-bold text-foreground">{stat.value}</p>
-          <p className="text-blue-600 text-xs mt-1">{stat.change}</p>
-        </motion.div>
-      ))}
-    </div>
-    <div className="bg-card border border-border rounded-xl p-6">
-      <h3 className="font-display font-semibold text-foreground mb-4">Recent Submissions</h3>
-      <div className="space-y-3">
-        {mockSubmissions.slice(0, 3).map((s) => (
-          <div key={s.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-            <div>
-              <p className="text-sm font-medium text-foreground">{s.name}</p>
-              <p className="text-xs text-muted-foreground">{s.email}</p>
-            </div>
-            <span className="text-xs text-muted-foreground">{s.date}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
 
-// ============ CONTENT ============
-const ContentPanel = () => {
-  const [sections] = useState([
-    { id: "hero", title: "Hero Section", visible: true },
-    { id: "services", title: "Services Section", visible: true },
-    { id: "about", title: "About Section", visible: true },
-    { id: "contact", title: "Contact Section", visible: true },
-  ]);
+
+const DashboardPanel = () => {
+
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+
+  useEffect(() => {
+
+    const load = async () => {
+      const sub = await apiFetch("/submissions");
+      const srv = await apiFetch("/services");
+
+      setSubmissions(sub || []);
+      setServices(srv || []);
+    };
+
+    load();
+
+    // 🔥 REALTIME AUTO REFRESH
+    const i = setInterval(load, 4000);
+    return () => clearInterval(i);
+
+  }, []);
+
+  const stats = [
+    { label: "Form Submissions", value: submissions.length, change: "Live" },
+    { label: "Page Views", value: "—", change: "Analytics" },
+    { label: "Active Services", value: services.length, change: "Live" },
+    { label: "Media Files", value: "—", change: "Upload ready" },
+  ];
 
   return (
     <div>
+
+      <h2 className="font-display text-2xl font-bold text-foreground mb-6">
+        Dashboard
+      </h2>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {stats.map((stat) => (
+          <motion.div
+            key={stat.label}
+            whileHover={{ y: -2 }}
+            className="bg-card border border-border rounded-xl p-6 shadow-card"
+          >
+            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">
+              {stat.label}
+            </p>
+            <p className="font-display text-3xl font-bold text-foreground">
+              {stat.value}
+            </p>
+            <p className="text-blue-600 text-xs mt-1">{stat.change}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ===== REALTIME RECENT SUBMISSIONS ===== */}
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h3 className="font-display font-semibold text-foreground mb-4">
+          Recent Submissions
+        </h3>
+
+        <div className="space-y-3">
+          {submissions.slice(0, 3).map((s: any) => (
+            <div key={s._id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+              <div>
+                <p className="text-sm font-medium text-foreground">{s.name}</p>
+                <p className="text-xs text-muted-foreground">{s.email}</p>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {new Date(s.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          ))}
+        </div>
+
+      </div>
+
+    </div>
+  );
+};
+
+// ============ CONTENT ============
+const ContentPanel = () => {
+
+  // 🔥 REAL DATA FROM BACKEND
+  const [sections, setSections] = useState<any[]>([]);
+  const [activeSection, setActiveSection] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
+
+  // LOAD CONTENTS FROM MONGODB
+  useEffect(() => {
+
+    const loadContent = () => {
+      apiFetch("/content").then((data) => {
+        setSections(data || []);
+      });
+    };
+
+    loadContent();
+
+    // 🔥 AUTO REFRESH EVERY 5s
+    const interval = setInterval(loadContent, 5000);
+
+    return () => clearInterval(interval);
+
+  }, []);
+
+  const openEditor = (section: any) => {
+    setActiveSection(section);
+    setFormData(section);
+  };
+
+  const handleSave = async () => {
+    if (!activeSection) return;
+
+    const updated = await apiFetch(`/content/${activeSection._id}`, {
+      method: "PUT",
+      body: JSON.stringify(formData)
+    });
+
+    setSections(prev =>
+      prev.map(s => s._id === updated._id ? updated : s)
+    );
+
+    setActiveSection(null);
+  };
+
+  return (
+    <div>
+
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-display text-2xl font-bold text-foreground">Content Manager</h2>
+        <h2 className="font-display text-2xl font-bold text-foreground">
+          Content Manager
+        </h2>
+
         <button
+          onClick={handleSave}
           style={{ background: "#facc15", color: "#1E3A8A" }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
         >
           <Save size={14} /> Save All
         </button>
       </div>
-      <div className="space-y-4">
-        {sections.map((section) => (
-          <div key={section.id} className="bg-card border border-border rounded-xl p-6 shadow-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h3 className="font-semibold text-foreground">{section.title}</h3>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs ${section.visible
-                    ? "bg-blue-50 text-blue-600"
-                    : "bg-muted text-muted-foreground"
-                    }`}
-                >
-                  {section.visible ? "Visible" : "Hidden"}
-                </span>
+
+      {/* ================= LIST VIEW ================= */}
+      {!activeSection && (
+        <div className="space-y-4">
+          {sections.map((section) => (
+            <div
+              key={section._id}
+              onClick={() => openEditor(section)}
+              className="bg-card border border-border rounded-xl p-6 shadow-card cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-semibold text-foreground">
+                    {section.title || section.id}
+                  </h3>
+
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600">
+                    Visible
+                  </span>
+                </div>
+                <ChevronRight size={16} />
               </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
+
+              <p className="text-muted-foreground text-sm">
+                Click to edit section content, text, and images.
+              </p>
             </div>
-            <p className="text-muted-foreground text-sm">Click to edit section content, text, and images.</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* ================= EDIT MODE ================= */}
+      {activeSection && (
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+
+          <button onClick={() => setActiveSection(null)} className="text-sm">
+            ← Back
+          </button>
+
+          <input
+            value={formData.title || ""}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className="w-full px-4 py-3 rounded-xl bg-muted border border-border"
+            placeholder="Title"
+          />
+
+          <textarea
+            value={formData.text || ""}
+            onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+            className="w-full px-4 py-3 rounded-xl bg-muted border border-border"
+            placeholder="Content text"
+          />
+
+        </div>
+      )}
+
     </div>
   );
 };
 
 // ============ SUBMISSIONS ============
-const SubmissionsPanel = () => (
-  <div>
-    <h2 className="font-display text-2xl font-bold text-foreground mb-6">Contact Submissions</h2>
-    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
-      <div className="overflow-x-auto">
+const SubmissionsPanel = () => {
+
+  const [submissions, setSubmissions] = useState<any[]>([]);
+
+  useEffect(() => {
+
+    const load = () => {
+      apiFetch("/submissions").then(data => {
+        setSubmissions(data || []);
+      });
+    };
+
+    load();
+
+    // 🔥 realtime refresh
+    const i = setInterval(load, 3000);
+    return () => clearInterval(i);
+
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    await apiFetch(`/submissions/${id}`, {
+      method: "DELETE"
+    });
+
+    setSubmissions(prev => prev.filter(s => s._id !== id));
+  };
+
+  return (
+    <div>
+      <h2 className="font-display text-2xl font-bold text-foreground mb-6">
+        Contact Submissions
+      </h2>
+
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
         <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr>
-              {["Name", "Email", "Phone", "Message", "Date", ""].map((h) => (
-                <th
-                  key={h}
-                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
           <tbody>
-            {mockSubmissions.map((s) => (
-              <tr key={s.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-4 text-sm font-medium text-foreground">{s.name}</td>
-                <td className="px-4 py-4 text-sm text-muted-foreground">{s.email}</td>
-                <td className="px-4 py-4 text-sm text-muted-foreground">{s.phone}</td>
-                <td className="px-4 py-4 text-sm text-muted-foreground max-w-xs truncate">{s.message}</td>
-                <td className="px-4 py-4 text-sm text-muted-foreground">{s.date}</td>
-                <td className="px-4 py-4">
-                  <button className="text-destructive hover:text-destructive/80">
+            {submissions.map((s) => (
+              <tr key={s._id}>
+                <td>{s.name}</td>
+                <td>{s.email}</td>
+                <td>{s.message}</td>
+                <td>
+                  <button onClick={() => handleDelete(s._id)}>
                     <Trash2 size={14} />
                   </button>
                 </td>
@@ -311,63 +452,166 @@ const SubmissionsPanel = () => (
         </table>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ============ MEDIA ============
-const MediaPanel = () => (
-  <div>
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="font-display text-2xl font-bold text-foreground">Media Library</h2>
-      <button
-        style={{ background: "#facc15", color: "#1E3A8A" }}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
-      >
-        <Plus size={14} /> Upload
-      </button>
-    </div>
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className="aspect-square bg-muted rounded-xl border border-border flex items-center justify-center group hover:border-blue-400/50 transition-colors cursor-pointer"
+const MediaPanel = () => {
+
+  const [files, setFiles] = useState<any[]>([]);
+
+  // open file picker
+  const handleUpload = (e: any) => {
+    const selected = Array.from(e.target.files || []);
+
+    const mapped = selected.map((file: any) => ({
+      id: crypto.randomUUID(),
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setFiles(prev => [...prev, ...mapped]);
+  };
+
+  // remove image
+  const handleRemove = (id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  return (
+    <div>
+      {/* HEADER */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display text-2xl font-bold text-foreground">
+          Media Library
+        </h2>
+
+        {/* REAL FILE INPUT */}
+        <label
+          style={{ background: "#facc15", color: "#1E3A8A" }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer"
         >
-          <Image size={32} className="text-muted-foreground/40 group-hover:text-blue-400/60 transition-colors" />
-        </div>
-      ))}
+          <Plus size={14} /> Upload
+          <input
+            type="file"
+            multiple
+            hidden
+            onChange={handleUpload}
+          />
+        </label>
+      </div>
+
+      {/* GRID */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+        {/* Uploaded Images */}
+        {files.map((item) => (
+          <div
+            key={item.id}
+            className="relative aspect-square rounded-xl border border-border overflow-hidden group"
+          >
+            <img
+              src={item.preview}
+              className="w-full h-full object-cover"
+            />
+
+            {/* REMOVE BUTTON */}
+            <button
+              onClick={() => handleRemove(item.id)}
+              className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+
+        {/* Empty Placeholder */}
+        {files.length === 0 && (
+          <div className="aspect-square bg-muted rounded-xl border border-border flex items-center justify-center">
+            <Image size={32} className="text-muted-foreground/40" />
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ============ SETTINGS ============
-const SettingsPanel = () => (
-  <div>
-    <h2 className="font-display text-2xl font-bold text-foreground mb-6">Settings</h2>
-    <div className="bg-card border border-border rounded-xl p-6 shadow-card space-y-6 max-w-2xl">
-      {[
-        { label: "Company Name", value: "THINK Acquisition LLC" },
-        { label: "POC Name", value: "William Randolph" },
-        { label: "Phone", value: "(703) 819-6192" },
-        { label: "Email", value: "william@thinkacquisition.net" },
-      ].map((field) => (
-        <div key={field.label}>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">{field.label}</label>
-          <input
-            defaultValue={field.value}
-            className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
-          />
-        </div>
-      ))}
-      <button
-        style={{ background: "#facc15", color: "#1E3A8A" }}
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm"
-      >
-        <Save size={14} /> Save Settings
-      </button>
-    </div>
-  </div>
-);
+const SettingsPanel = () => {
 
+  const [form, setForm] = useState<any>({
+    companyName: "",
+    pocName: "",
+    phone: "",
+    email: ""
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    apiFetch("/settings").then(data => {
+      if (data) setForm(data);
+    });
+  }, []);
+
+  const handleChange = (key: string, value: string) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+
+    await apiFetch("/settings", {
+      method: "PUT",
+      body: JSON.stringify(form)
+    });
+
+    setLoading(false);
+    alert("Settings Saved ✅");
+  };
+
+  return (
+    <div>
+
+      <h2 className="font-display text-2xl font-bold text-foreground mb-6">
+        Settings
+      </h2>
+
+      <div className="bg-card border border-border rounded-xl p-6 shadow-card space-y-6 max-w-2xl">
+
+        {[
+          { key: "companyName", label: "Company Name" },
+          { key: "pocName", label: "POC Name" },
+          { key: "phone", label: "Phone" },
+          { key: "email", label: "Email" },
+        ].map((field) => (
+          <div key={field.key}>
+            <label className="text-sm font-medium text-foreground mb-1.5 block">
+              {field.label}
+            </label>
+
+            <input
+              value={form[field.key] || ""}
+              onChange={(e) => handleChange(field.key, e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+            />
+          </div>
+        ))}
+
+        <button
+          onClick={handleSave}
+          style={{ background: "#facc15", color: "#1E3A8A" }}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm"
+        >
+          <Save size={14} />
+          {loading ? "Saving..." : "Save Settings"}
+        </button>
+
+      </div>
+
+    </div>
+  );
+};
 // ============ ADMIN DASHBOARD ============
 const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [activeTab, setActiveTab] = useState("dashboard");

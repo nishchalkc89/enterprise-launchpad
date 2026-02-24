@@ -10,6 +10,7 @@ const contactRoutes = require('./routes/contact');
 const serviceRoutes = require('./routes/services');
 const uploadRoutes = require('./routes/upload');
 const submissionRoutes = require('./routes/submissions');
+const settingsRoutes = require('./routes/Settings');
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static("uploads"));
 
 // Routes
 app.use('/api/admin', authRoutes);
@@ -28,6 +30,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
