@@ -612,7 +612,7 @@ const MediaPanel = () => {
       const res = await fetch("http://localhost:5000/api/media");
       const data = await res.json();
       setFiles(data || []);
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -635,7 +635,7 @@ const MediaPanel = () => {
           },
           body: formData,
         });
-      } catch {}
+      } catch { }
     }
     loadMedia();
   };
@@ -649,7 +649,7 @@ const MediaPanel = () => {
           ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
         },
       });
-    } catch {}
+    } catch { }
     setFiles(prev => prev.filter(f => f._id !== id));
   };
 
@@ -907,46 +907,76 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 };
 
 // ============ MAIN ============
+// ============ MAIN ============
 const Admin = () => {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+
+    // 🔥 AUTO ATTACH TOKEN TO ALL REQUESTS
+    if (token) {
+      // ensure apiFetch sends token
+      (window as any).__ADMIN_TOKEN__ = token;
+    }
+
     if (!token) {
       setChecking(false);
       return;
     }
-    // Validate token by calling a protected endpoint
+
+    // 🔥 Validate session silently
     apiFetch("/submissions")
       .then((res) => {
         if (Array.isArray(res)) {
           setLoggedIn(true);
         } else {
           localStorage.removeItem("token");
+          setLoggedIn(false);
         }
       })
       .catch(() => {
         localStorage.removeItem("token");
+        setLoggedIn(false);
       })
       .finally(() => setChecking(false));
   }, []);
 
   if (checking) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#f1f5f9",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <p style={{ color: "#64748b", fontSize: 14 }}>Verifying session…</p>
       </div>
     );
   }
 
   return loggedIn ? (
-    <AdminDashboard onLogout={() => {
-      localStorage.removeItem("token");
-      setLoggedIn(false);
-    }} />
+    <AdminDashboard
+      onLogout={() => {
+        localStorage.removeItem("token");
+        delete (window as any).__ADMIN_TOKEN__;
+        setLoggedIn(false);
+      }}
+    />
   ) : (
-    <AdminLogin onLogin={() => setLoggedIn(true)} />
+    <AdminLogin
+      onLogin={() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          (window as any).__ADMIN_TOKEN__ = token;
+        }
+        setLoggedIn(true);
+      }}
+    />
   );
 };
 
