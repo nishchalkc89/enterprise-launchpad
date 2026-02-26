@@ -33,9 +33,11 @@ const ICON_OPTIONS = [
 
 const MAX_SERVICES = 6;
 const MAX_BADGES = 3;
-const HERO_PARA_MIN_WORDS = 80;
-const HERO_PARA_MAX_WORDS = 220;
-const ABOUT_DESC_MAX_WORDS = 160;
+const HERO_PARA_MIN_WORDS = 70;
+const HERO_PARA_MAX_WORDS = 80;
+const ABOUT_DESC_MAX_WORDS = 80;
+const HEADING_MIN_WORDS = 4;
+const HEADING_MAX_WORDS = 5;
 const ABOUT_MAX_BULLETS = 5;
 const ABOUT_BULLET_MAX_CHARS = 60;
 const ABOUT_MAX_STATS = 4;
@@ -349,6 +351,14 @@ const ContentPanel = () => {
     if (!activeSection) return true;
     const sid = activeSection.sectionId;
 
+    // Heading validation (applies to hero & about)
+    if (sid === "hero" || sid === "about") {
+      const titleWc = countWords(formData.title || "");
+      if (titleWc < HEADING_MIN_WORDS || titleWc > HEADING_MAX_WORDS) {
+        errors.headingWords = `Heading must be ${HEADING_MIN_WORDS}–${HEADING_MAX_WORDS} words (currently ${titleWc})`;
+      }
+    }
+
     if (sid === "hero") {
       const wc = countWords(formData.body || "");
       if (wc < HERO_PARA_MIN_WORDS) errors.heroParagraph = `Minimum ${HERO_PARA_MIN_WORDS} words required (currently ${wc})`;
@@ -446,6 +456,18 @@ const ContentPanel = () => {
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Heading Highlight</label>
         <input value={meta.headingHighlight || ""} onChange={(e) => updateMeta("headingHighlight", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Proven Results." />
 
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title (4–5 words)</label>
+        <input
+          value={formData.title || ""}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.headingWords ? 'border-red-500' : 'border-border'}`}
+          placeholder="Strategic Solutions Proven Results"
+        />
+        <p className={`text-xs font-medium ${validationErrors.headingWords ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {countWords(formData.title || "")} / {HEADING_MIN_WORDS}–{HEADING_MAX_WORDS} words
+        </p>
+        <ValidationMsg error={validationErrors.headingWords} id="headingWords" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paragraph</label>
         <textarea
           value={formData.body || ""}
@@ -503,10 +525,18 @@ const ContentPanel = () => {
     const stats = meta.stats || [];
     return (
       <>
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title</label>
-        <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title (4–5 words)</label>
+        <input
+          value={formData.title || ""}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.headingWords ? 'border-red-500' : 'border-border'}`}
+        />
+        <p className={`text-xs font-medium ${validationErrors.headingWords ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {countWords(formData.title || "")} / {HEADING_MIN_WORDS}–{HEADING_MAX_WORDS} words
+        </p>
+        <ValidationMsg error={validationErrors.headingWords} id="headingWords" />
 
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description (70–80 words)</label>
         <textarea
           value={formData.body || ""}
           onChange={(e) => {
@@ -896,12 +926,7 @@ const MediaPanel = () => {
 
 // ============ SETTINGS ============
 const SettingsPanel = () => {
-  const [form, setForm] = useState<any>({
-    companyName: "",
-    pocName: "",
-    phone: "",
-    email: ""
-  });
+  const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -1102,28 +1127,11 @@ const Admin = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      (window as any).__ADMIN_TOKEN__ = token;
-    }
-    if (!token) {
-      setChecking(false);
-      return;
-    }
-    apiFetch("/submissions")
-      .then((res) => {
-        if (Array.isArray(res)) {
-          setLoggedIn(true);
-        } else {
-          localStorage.removeItem("token");
-          setLoggedIn(false);
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem("token");
-        setLoggedIn(false);
-      })
-      .finally(() => setChecking(false));
+    // Force login every time user visits /admin
+    localStorage.removeItem("token");
+    delete (window as any).__ADMIN_TOKEN__;
+    setLoggedIn(false);
+    setChecking(false);
   }, []);
 
   if (checking) {
