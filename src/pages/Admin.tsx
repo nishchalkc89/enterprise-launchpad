@@ -241,13 +241,19 @@ const sidebarItems = [
 const DashboardPanel = () => {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState({ pageViews: 0 });
+  const [media, setMedia] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
       const sub = await apiFetch("/submissions");
       const srv = await apiFetch("/services");
+      const analyticsData = await apiFetch("/analytics");
+      const mediaData = await apiFetch("/media");
       setSubmissions(sub || []);
       setServices(srv || []);
+      if (analyticsData) setAnalytics(analyticsData);
+      if (Array.isArray(mediaData)) setMedia(mediaData);
     };
     load();
     const i = setInterval(load, 4000);
@@ -256,9 +262,9 @@ const DashboardPanel = () => {
 
   const stats = [
     { label: "Form Submissions", value: submissions.length, change: "Live" },
-    { label: "Page Views", value: "—", change: "Analytics" },
+    { label: "Page Views", value: analytics.pageViews, change: "Live" },
     { label: "Active Services", value: services.length, change: "Live" },
-    { label: "Media Files", value: "—", change: "Upload ready" },
+    { label: "Media Files", value: media.length, change: "Live" },
   ];
 
   return (

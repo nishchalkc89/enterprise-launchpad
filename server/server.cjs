@@ -13,6 +13,7 @@ const uploadRoutes = require('./routes/upload');
 const submissionRoutes = require('./routes/submissions');
 const settingsRoutes = require('./routes/Settings');
 const mediaRoutes = require('./routes/media');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
