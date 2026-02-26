@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "@/lib/api";
-
 
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -18,6 +17,33 @@ import {
   Plus,
   ChevronRight,
 } from "lucide-react";
+
+// ===== VALIDATION HELPERS =====
+const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+
+const isYouTubeEmbed = (url: string) => {
+  if (!url) return true; // empty is ok
+  return /^https?:\/\/(www\.)?youtube\.com\/embed\//.test(url.trim());
+};
+
+const ICON_OPTIONS = [
+  "Briefcase", "FileText", "BarChart3", "Users", "Settings", "ShieldCheck",
+  "Star", "Award", "Target", "Rocket", "Laptop", "Database", "ClipboardCheck",
+];
+
+const MAX_SERVICES = 6;
+const MAX_BADGES = 3;
+const HERO_PARA_MIN_WORDS = 80;
+const HERO_PARA_MAX_WORDS = 220;
+const ABOUT_DESC_MAX_WORDS = 160;
+const ABOUT_MAX_BULLETS = 5;
+const ABOUT_BULLET_MAX_CHARS = 60;
+const ABOUT_MAX_STATS = 4;
+const SERVICE_TITLE_MAX = 40;
+const SERVICE_DESC_MAX = 110;
+const MEDIA_MAX_SIZE_MB = 2;
+const MEDIA_ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "video/mp4"];
+const MEDIA_ALLOWED_EXTS = ".jpg,.jpeg,.png,.webp,.mp4";
 
 // ============ LOGIN ============
 const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
@@ -65,7 +91,7 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
         style={{
           width: "100%",
           maxWidth: 440,
-          background: "#1E3A8A",           /* ← BLUE CARD */
+          background: "#1E3A8A",
           border: "1px solid rgba(255,255,255,0.12)",
           borderRadius: 20,
           padding: 40,
@@ -210,31 +236,20 @@ const sidebarItems = [
 ];
 
 // ============ DASHBOARD ============
-
-// ============ DASHBOARD ============
-
-
 const DashboardPanel = () => {
-
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
 
   useEffect(() => {
-
     const load = async () => {
       const sub = await apiFetch("/submissions");
       const srv = await apiFetch("/services");
-
       setSubmissions(sub || []);
       setServices(srv || []);
     };
-
     load();
-
-    // 🔥 REALTIME AUTO REFRESH
     const i = setInterval(load, 4000);
     return () => clearInterval(i);
-
   }, []);
 
   const stats = [
@@ -246,11 +261,9 @@ const DashboardPanel = () => {
 
   return (
     <div>
-
       <h2 className="font-display text-2xl font-bold text-foreground mb-6">
         Dashboard
       </h2>
-
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
           <motion.div
@@ -269,28 +282,26 @@ const DashboardPanel = () => {
         ))}
       </div>
 
-      {/* ===== REALTIME RECENT SUBMISSIONS ===== */}
       <div className="bg-card border border-border rounded-xl p-6">
         <h3 className="font-display font-semibold text-foreground mb-4">
           Recent Submissions
         </h3>
-
-        <div className="space-y-3">
-          {submissions.slice(0, 3).map((s: any) => (
-            <div key={s._id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-              <div>
-                <p className="text-sm font-medium text-foreground">{s.name}</p>
-                <p className="text-xs text-muted-foreground">{s.email}</p>
+        <div className="overflow-x-auto">
+          <div className="space-y-3 min-w-[400px]">
+            {submissions.slice(0, 3).map((s: any) => (
+              <div key={s._id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{s.name}</p>
+                  <p className="text-xs text-muted-foreground">{s.email}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(s.createdAt).toLocaleDateString()}
+                </span>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {new Date(s.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-
       </div>
-
     </div>
   );
 };
@@ -302,6 +313,8 @@ const ContentPanel = () => {
   const [formData, setFormData] = useState<any>({});
   const [servicesList, setServicesList] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadContent = () => {
@@ -320,6 +333,7 @@ const ContentPanel = () => {
   const openEditor = (section: any) => {
     setActiveSection(section);
     setFormData({ ...section, metadata: { ...(section.metadata || {}) } });
+    setValidationErrors({});
   };
 
   const updateMeta = (key: string, value: any) => {
@@ -329,8 +343,49 @@ const ContentPanel = () => {
     }));
   };
 
+  // ===== VALIDATION =====
+  const validateContent = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!activeSection) return true;
+    const sid = activeSection.sectionId;
+
+    if (sid === "hero") {
+      const wc = countWords(formData.body || "");
+      if (wc < HERO_PARA_MIN_WORDS) errors.heroParagraph = `Minimum ${HERO_PARA_MIN_WORDS} words required (currently ${wc})`;
+      if (wc > HERO_PARA_MAX_WORDS) errors.heroParagraph = `Maximum ${HERO_PARA_MAX_WORDS} words allowed (currently ${wc})`;
+      const videoUrl = formData.metadata?.videoUrl || "";
+      if (videoUrl && !isYouTubeEmbed(videoUrl)) errors.heroVideo = "Must be a YouTube embed URL (https://youtube.com/embed/...)";
+      const badges = formData.metadata?.badges || [];
+      if (badges.length > MAX_BADGES) errors.heroBadges = `Maximum ${MAX_BADGES} badges allowed`;
+    }
+
+    if (sid === "about") {
+      const wc = countWords(formData.body || "");
+      if (wc > ABOUT_DESC_MAX_WORDS) errors.aboutDesc = `Maximum ${ABOUT_DESC_MAX_WORDS} words allowed (currently ${wc})`;
+      const bullets = formData.metadata?.bullets || [];
+      if (bullets.length > ABOUT_MAX_BULLETS) errors.aboutBullets = `Maximum ${ABOUT_MAX_BULLETS} bullets allowed`;
+      bullets.forEach((b: string, i: number) => {
+        if (b.length > ABOUT_BULLET_MAX_CHARS) errors[`aboutBullet${i}`] = `Bullet ${i + 1}: max ${ABOUT_BULLET_MAX_CHARS} characters`;
+      });
+      const stats = formData.metadata?.stats || [];
+      if (stats.length > ABOUT_MAX_STATS) errors.aboutStats = `Maximum ${ABOUT_MAX_STATS} stat cards allowed`;
+    }
+
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      // Scroll to first error
+      setTimeout(() => {
+        const firstErr = formRef.current?.querySelector('[data-validation-error]');
+        firstErr?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     if (!activeSection) return;
+    if (!validateContent()) return;
     setSaving(true);
     const updated = await apiFetch(`/content/${activeSection._id}`, {
       method: "PUT",
@@ -339,10 +394,15 @@ const ContentPanel = () => {
     setSections((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
     setSaving(false);
     setActiveSection(null);
+    setValidationErrors({});
   };
 
   // Services CRUD
   const addService = async () => {
+    if (servicesList.length >= MAX_SERVICES) {
+      alert(`Maximum ${MAX_SERVICES} services allowed.`);
+      return;
+    }
     const svc = await apiFetch("/services", {
       method: "POST",
       body: JSON.stringify({ title: "New Service", description: "Description here", icon: "Briefcase" }),
@@ -363,52 +423,143 @@ const ContentPanel = () => {
     setServicesList((prev) => prev.filter((s) => s._id !== id));
   };
 
+  const ValidationMsg = ({ error, id }: { error?: string; id: string }) =>
+    error ? (
+      <p data-validation-error={id} className="text-xs mt-1" style={{ color: "#ef4444" }}>
+        ⚠ {error}
+      </p>
+    ) : null;
+
   // ---- Section-specific field renderers ----
   const renderHeroFields = () => {
     const meta = formData.metadata || {};
+    const bodyWords = countWords(formData.body || "");
+    const badges = meta.badges || [];
     return (
       <>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Badge Text</label>
         <input value={meta.badgeText || ""} onChange={(e) => updateMeta("badgeText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Government Contracting Excellence" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Heading Line 1</label>
         <input value={meta.headingLine1 || ""} onChange={(e) => updateMeta("headingLine1", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Strategic Solutions." />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Heading Highlight</label>
         <input value={meta.headingHighlight || ""} onChange={(e) => updateMeta("headingHighlight", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Proven Results." />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paragraph</label>
-        <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={3} />
+        <textarea
+          value={formData.body || ""}
+          onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.heroParagraph ? 'border-red-500' : 'border-border'}`}
+          rows={3}
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">Recommended for hero layout balance.</p>
+          <p className={`text-xs font-medium ${bodyWords < HERO_PARA_MIN_WORDS || bodyWords > HERO_PARA_MAX_WORDS ? 'text-red-500' : 'text-green-600'}`}>
+            {bodyWords} / {HERO_PARA_MIN_WORDS}–{HERO_PARA_MAX_WORDS} words
+          </p>
+        </div>
+        <ValidationMsg error={validationErrors.heroParagraph} id="heroParagraph" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Primary Button Text</label>
         <input value={meta.buttonPrimaryText || ""} onChange={(e) => updateMeta("buttonPrimaryText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Secondary Button Text</label>
         <input value={meta.buttonSecondaryText || ""} onChange={(e) => updateMeta("buttonSecondaryText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Video URL</label>
-        <input value={meta.videoUrl || ""} onChange={(e) => updateMeta("videoUrl", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="https://youtube.com/embed/..." />
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Badges (comma separated)</label>
-        <input value={(meta.badges || []).join(", ")} onChange={(e) => updateMeta("badges", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Government Cleared, Mission Focused, Rapid Delivery" />
+        <input
+          value={meta.videoUrl || ""}
+          onChange={(e) => updateMeta("videoUrl", e.target.value)}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.heroVideo ? 'border-red-500' : 'border-border'}`}
+          placeholder="https://youtube.com/embed/..."
+        />
+        <p className="text-xs text-muted-foreground">YouTube embed URLs only (https://youtube.com/embed/...)</p>
+        <ValidationMsg error={validationErrors.heroVideo} id="heroVideo" />
+
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Badges (comma separated) — {badges.length}/{MAX_BADGES} max
+        </label>
+        <input
+          value={badges.join(", ")}
+          onChange={(e) => {
+            const newBadges = e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean);
+            if (newBadges.length <= MAX_BADGES) {
+              updateMeta("badges", newBadges);
+            }
+          }}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.heroBadges ? 'border-red-500' : 'border-border'}`}
+          placeholder="Government Cleared, Mission Focused, Rapid Delivery"
+        />
+        <ValidationMsg error={validationErrors.heroBadges} id="heroBadges" />
       </>
     );
   };
 
   const renderAboutFields = () => {
     const meta = formData.metadata || {};
+    const bodyWords = countWords(formData.body || "");
+    const bullets = meta.bullets || [];
+    const stats = meta.stats || [];
     return (
       <>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title</label>
         <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</label>
-        <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={4} />
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bullets (one per line)</label>
-        <textarea value={(meta.bullets || []).join("\n")} onChange={(e) => updateMeta("bullets", e.target.value.split("\n").filter(Boolean))} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={4} />
+        <textarea
+          value={formData.body || ""}
+          onChange={(e) => {
+            const words = e.target.value.trim().split(/\s+/).filter(Boolean);
+            if (words.length <= ABOUT_DESC_MAX_WORDS) {
+              setFormData({ ...formData, body: e.target.value });
+            } else {
+              // Auto trim to max words
+              setFormData({ ...formData, body: words.slice(0, ABOUT_DESC_MAX_WORDS).join(" ") });
+            }
+          }}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.aboutDesc ? 'border-red-500' : 'border-border'}`}
+          rows={4}
+        />
+        <p className={`text-xs font-medium ${bodyWords > ABOUT_DESC_MAX_WORDS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {bodyWords} / {ABOUT_DESC_MAX_WORDS} words
+        </p>
+        <ValidationMsg error={validationErrors.aboutDesc} id="aboutDesc" />
+
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Bullets (one per line) — {bullets.length}/{ABOUT_MAX_BULLETS} max, {ABOUT_BULLET_MAX_CHARS} chars each
+        </label>
+        <textarea
+          value={bullets.join("\n")}
+          onChange={(e) => {
+            let lines = e.target.value.split("\n").filter(Boolean);
+            if (lines.length > ABOUT_MAX_BULLETS) lines = lines.slice(0, ABOUT_MAX_BULLETS);
+            lines = lines.map((l: string) => l.slice(0, ABOUT_BULLET_MAX_CHARS));
+            updateMeta("bullets", lines);
+          }}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.aboutBullets ? 'border-red-500' : 'border-border'}`}
+          rows={4}
+        />
+        <ValidationMsg error={validationErrors.aboutBullets} id="aboutBullets" />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Image URL</label>
         <input value={meta.imageUrl || ""} onChange={(e) => updateMeta("imageUrl", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="/business.png" />
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stats</label>
-        {(meta.stats || [{ num: "", label: "" }]).map((stat: any, i: number) => (
+        <p className="text-xs text-muted-foreground">Recommended ratio 4:5, max height 640px</p>
+
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Stats — {stats.length}/{ABOUT_MAX_STATS} max
+        </label>
+        {stats.map((stat: any, i: number) => (
           <div key={i} className="flex gap-2">
-            <input value={stat.num || stat.value || ""} onChange={(e) => { const s = [...(meta.stats || [])]; s[i] = { ...s[i], num: e.target.value }; updateMeta("stats", s); }} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Value (e.g. 26+)" />
-            <input value={stat.label || ""} onChange={(e) => { const s = [...(meta.stats || [])]; s[i] = { ...s[i], label: e.target.value }; updateMeta("stats", s); }} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Label" />
-            <button onClick={() => { const s = (meta.stats || []).filter((_: any, j: number) => j !== i); updateMeta("stats", s); }} className="text-red-500 text-xs px-2">✕</button>
+            <input value={stat.num || stat.value || ""} onChange={(e) => { const s = [...stats]; s[i] = { ...s[i], num: e.target.value }; updateMeta("stats", s); }} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Value (e.g. 26+)" />
+            <input value={stat.label || ""} onChange={(e) => { const s = [...stats]; s[i] = { ...s[i], label: e.target.value }; updateMeta("stats", s); }} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Label" />
+            <button onClick={() => { const s = stats.filter((_: any, j: number) => j !== i); updateMeta("stats", s); }} className="text-red-500 text-xs px-2">✕</button>
           </div>
         ))}
-        <button onClick={() => updateMeta("stats", [...(meta.stats || []), { num: "", label: "" }])} className="text-xs text-blue-600 font-medium">+ Add Stat</button>
+        <ValidationMsg error={validationErrors.aboutStats} id="aboutStats" />
+        {stats.length < ABOUT_MAX_STATS && (
+          <button onClick={() => updateMeta("stats", [...stats, { num: "", label: "" }])} className="text-xs text-blue-600 font-medium">+ Add Stat</button>
+        )}
       </>
     );
   };
@@ -421,19 +572,46 @@ const ContentPanel = () => {
       <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={2} />
       <div className="border-t border-border pt-4 mt-2">
         <div className="flex items-center justify-between mb-3">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Service Cards</label>
-          <button onClick={addService} style={{ background: "#facc15", color: "#1E3A8A" }} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"><Plus size={12} /> Add Service</button>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Service Cards — {servicesList.length}/{MAX_SERVICES}
+          </label>
+          <button
+            onClick={addService}
+            disabled={servicesList.length >= MAX_SERVICES}
+            style={{ background: servicesList.length >= MAX_SERVICES ? "#94a3b8" : "#facc15", color: "#1E3A8A" }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"
+          >
+            <Plus size={12} /> Add Service
+          </button>
         </div>
         <div className="space-y-3">
           {servicesList.map((svc) => (
             <div key={svc._id} className="p-4 rounded-xl bg-muted/50 border border-border space-y-2">
-              <div className="flex gap-2">
-                <input value={svc.title} onChange={(e) => updateService(svc._id, { ...svc, title: e.target.value })} className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="Title" />
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <div className="flex-1">
+                  <input
+                    value={svc.title}
+                    maxLength={SERVICE_TITLE_MAX}
+                    onChange={(e) => updateService(svc._id, { ...svc, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm"
+                    placeholder="Title"
+                  />
+                  <p className="text-xs text-muted-foreground mt-0.5 text-right">{(svc.title || "").length}/{SERVICE_TITLE_MAX}</p>
+                </div>
                 <select value={svc.icon || "Briefcase"} onChange={(e) => updateService(svc._id, { ...svc, icon: e.target.value })} className="px-3 py-2 rounded-lg bg-muted border border-border text-sm">
-                  {["Briefcase", "FileText", "BarChart3", "Users", "Settings", "ShieldCheck", "Star"].map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+                  {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
                 </select>
               </div>
-              <textarea value={svc.description} onChange={(e) => updateService(svc._id, { ...svc, description: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm" rows={2} />
+              <div>
+                <textarea
+                  value={svc.description}
+                  maxLength={SERVICE_DESC_MAX}
+                  onChange={(e) => updateService(svc._id, { ...svc, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm"
+                  rows={2}
+                />
+                <p className="text-xs text-muted-foreground text-right">{(svc.description || "").length}/{SERVICE_DESC_MAX}</p>
+              </div>
               <button onClick={() => deleteService(svc._id)} className="text-red-500 text-xs font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
             </div>
           ))}
@@ -475,7 +653,6 @@ const ContentPanel = () => {
     if (sid === "about") return renderAboutFields();
     if (sid === "services") return renderServicesFields();
     if (sid === "contact") return renderContactFields();
-    // Generic fallback
     return (
       <>
         <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Title" />
@@ -502,7 +679,6 @@ const ContentPanel = () => {
         )}
       </div>
 
-      {/* LIST VIEW */}
       {!activeSection && (
         <div className="space-y-4">
           {sections.map((section) => (
@@ -530,10 +706,9 @@ const ContentPanel = () => {
         </div>
       )}
 
-      {/* EDIT MODE */}
       {activeSection && (
-        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-          <button onClick={() => setActiveSection(null)} className="text-sm text-muted-foreground hover:text-foreground">
+        <div ref={formRef} className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <button onClick={() => { setActiveSection(null); setValidationErrors({}); }} className="text-sm text-muted-foreground hover:text-foreground">
             ← Back to sections
           </button>
           <h3 className="font-display text-lg font-semibold text-foreground capitalize">{activeSection.sectionId} Section</h3>
@@ -546,30 +721,21 @@ const ContentPanel = () => {
 
 // ============ SUBMISSIONS ============
 const SubmissionsPanel = () => {
-
   const [submissions, setSubmissions] = useState<any[]>([]);
 
   useEffect(() => {
-
     const load = () => {
       apiFetch("/submissions").then(data => {
         setSubmissions(data || []);
       });
     };
-
     load();
-
-    // 🔥 realtime refresh
     const i = setInterval(load, 3000);
     return () => clearInterval(i);
-
   }, []);
 
   const handleDelete = async (id: string) => {
-    await apiFetch(`/submissions/${id}`, {
-      method: "DELETE"
-    });
-
+    await apiFetch(`/submissions/${id}`, { method: "DELETE" });
     setSubmissions(prev => prev.filter(s => s._id !== id));
   };
 
@@ -578,9 +744,8 @@ const SubmissionsPanel = () => {
       <h2 className="font-display text-2xl font-bold text-foreground mb-6">
         Contact Submissions
       </h2>
-
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
-        <table className="w-full">
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card overflow-x-auto">
+        <table className="w-full min-w-[500px]">
           <tbody>
             {submissions.map((s) => (
               <tr key={s._id}>
@@ -603,10 +768,9 @@ const SubmissionsPanel = () => {
 
 // ============ MEDIA ============
 const MediaPanel = () => {
-
   const [files, setFiles] = useState<any[]>([]);
+  const [uploadError, setUploadError] = useState("");
 
-  // Load media from backend
   const loadMedia = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/media");
@@ -621,9 +785,27 @@ const MediaPanel = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Upload to backend
+  const validateFile = (file: File): string | null => {
+    if (file.size > MEDIA_MAX_SIZE_MB * 1024 * 1024) {
+      return `File "${file.name}" exceeds ${MEDIA_MAX_SIZE_MB}MB limit.`;
+    }
+    if (!MEDIA_ALLOWED_TYPES.includes(file.type)) {
+      return `File "${file.name}" has unsupported format. Allowed: jpg, png, webp, mp4.`;
+    }
+    return null;
+  };
+
   const handleUpload = async (e: any) => {
+    setUploadError("");
     const selected = Array.from(e.target.files || []) as File[];
+    for (const file of selected) {
+      const err = validateFile(file);
+      if (err) {
+        setUploadError(err);
+        e.target.value = "";
+        return;
+      }
+    }
     for (const file of selected) {
       const formData = new FormData();
       formData.append("file", file);
@@ -637,10 +819,10 @@ const MediaPanel = () => {
         });
       } catch { }
     }
+    e.target.value = "";
     loadMedia();
   };
 
-  // Delete from backend
   const handleRemove = async (id: string) => {
     try {
       await fetch(`http://localhost:5000/api/media/${id}`, {
@@ -655,13 +837,10 @@ const MediaPanel = () => {
 
   return (
     <div>
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h2 className="font-display text-2xl font-bold text-foreground">
           Media Library
         </h2>
-
-        {/* REAL FILE INPUT */}
         <label
           style={{ background: "#facc15", color: "#1E3A8A" }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer"
@@ -671,15 +850,23 @@ const MediaPanel = () => {
             type="file"
             multiple
             hidden
+            accept={MEDIA_ALLOWED_EXTS}
             onChange={handleUpload}
           />
         </label>
       </div>
 
-      {/* GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {uploadError && (
+        <div className="mb-4 p-3 rounded-lg text-sm font-medium" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+          ⚠ {uploadError}
+        </div>
+      )}
 
-        {/* Uploaded Images */}
+      <p className="text-xs text-muted-foreground mb-4">
+        Max file size: {MEDIA_MAX_SIZE_MB}MB · Formats: JPG, PNG, WebP, MP4 · Recommended max: 1600×1200px
+      </p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {files.map((item) => (
           <div
             key={item._id}
@@ -689,8 +876,6 @@ const MediaPanel = () => {
               src={`http://localhost:5000${item.url}`}
               className="w-full h-full object-cover"
             />
-
-            {/* REMOVE BUTTON */}
             <button
               onClick={() => handleRemove(item._id)}
               className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
@@ -699,8 +884,6 @@ const MediaPanel = () => {
             </button>
           </div>
         ))}
-
-        {/* Empty Placeholder */}
         {files.length === 0 && (
           <div className="aspect-square bg-muted rounded-xl border border-border flex items-center justify-center">
             <Image size={32} className="text-muted-foreground/40" />
@@ -713,46 +896,55 @@ const MediaPanel = () => {
 
 // ============ SETTINGS ============
 const SettingsPanel = () => {
-
   const [form, setForm] = useState<any>({
     companyName: "",
     pocName: "",
     phone: "",
     email: ""
   });
-
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     apiFetch("/settings").then(data => {
-      if (data) setForm(data);
+      if (data) {
+        setForm(data);
+        setLoaded(true);
+      }
     });
   }, []);
 
   const handleChange = (key: string, value: string) => {
-    setForm(prev => ({ ...prev, [key]: value }));
+    setForm((prev: any) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
+    // Prevent empty overwrites
+    const requiredFields = ["companyName", "pocName", "phone", "email"];
+    for (const f of requiredFields) {
+      if (!form[f]?.trim()) {
+        alert(`"${f}" cannot be empty.`);
+        return;
+      }
+    }
     setLoading(true);
-
     await apiFetch("/settings", {
       method: "PUT",
       body: JSON.stringify(form)
     });
-
     setLoading(false);
     alert("Settings Saved ✅");
   };
 
   return (
     <div>
-
-      <h2 className="font-display text-2xl font-bold text-foreground mb-6">
+      <h2 className="font-display text-2xl font-bold text-foreground mb-2">
         Settings
       </h2>
+      <p className="text-xs text-muted-foreground mb-6">Global Website Information</p>
 
       <div className="bg-card border border-border rounded-xl p-6 shadow-card space-y-6 max-w-2xl">
+        {!loaded && <p className="text-sm text-muted-foreground">Loading settings...</p>}
 
         {[
           { key: "companyName", label: "Company Name" },
@@ -764,7 +956,6 @@ const SettingsPanel = () => {
             <label className="text-sm font-medium text-foreground mb-1.5 block">
               {field.label}
             </label>
-
             <input
               value={form[field.key] || ""}
               onChange={(e) => handleChange(field.key, e.target.value)}
@@ -781,12 +972,11 @@ const SettingsPanel = () => {
           <Save size={14} />
           {loading ? "Saving..." : "Save Settings"}
         </button>
-
       </div>
-
     </div>
   );
 };
+
 // ============ ADMIN DASHBOARD ============
 const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -868,9 +1058,9 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         />
       )}
 
-      {/* ===== MAIN — stays white/light ===== */}
-      <main className="flex-1 min-h-screen">
-        <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border px-6 py-4 flex items-center justify-between">
+      {/* ===== MAIN ===== */}
+      <main className="flex-1 min-h-screen min-w-0">
+        <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border px-4 sm:px-6 py-4 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden text-foreground"
@@ -888,7 +1078,7 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
           </div>
         </header>
 
-        <div className="p-6 lg:p-10">
+        <div className="p-4 sm:p-6 lg:p-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -907,26 +1097,19 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 };
 
 // ============ MAIN ============
-// ============ MAIN ============
 const Admin = () => {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
-    // 🔥 AUTO ATTACH TOKEN TO ALL REQUESTS
     if (token) {
-      // ensure apiFetch sends token
       (window as any).__ADMIN_TOKEN__ = token;
     }
-
     if (!token) {
       setChecking(false);
       return;
     }
-
-    // 🔥 Validate session silently
     apiFetch("/submissions")
       .then((res) => {
         if (Array.isArray(res)) {
