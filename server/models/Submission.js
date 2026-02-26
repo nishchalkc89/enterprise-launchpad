@@ -1,31 +1,18 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db');
 
-const submissionSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+const Submission = sequelize.define('Submission', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  name: { type: DataTypes.STRING, allowNull: false },
+  email: { type: DataTypes.STRING, allowNull: false },
+  phone: { type: DataTypes.STRING, defaultValue: '' },
+  message: { type: DataTypes.TEXT, allowNull: false },
+}, { timestamps: true });
 
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
+Submission.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values.id;
+  return values;
+};
 
-    phone: {
-      type: String,
-      default: "",
-    },
-
-    message: {
-      type: String,
-      required: true,
-    },
-  },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model("Submission", submissionSchema);
+module.exports = Submission;

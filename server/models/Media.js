@@ -1,5 +1,15 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db');
 
-module.exports = mongoose.model("Media", new mongoose.Schema({
-    url: String
-}, { timestamps: true }));
+const Media = sequelize.define('Media', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  url: { type: DataTypes.STRING },
+}, { timestamps: true });
+
+Media.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values.id;
+  return values;
+};
+
+module.exports = Media;

@@ -5,19 +5,17 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const content = await Content.find();
+    const content = await Content.findAll();
     res.json(content);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// GET by sectionId
 router.get('/:sectionId', async (req, res) => {
   try {
-    let content = await Content.findOne({ sectionId: req.params.sectionId });
+    let content = await Content.findOne({ where: { sectionId: req.params.sectionId } });
     if (!content) {
-      // Auto-create if missing
       content = await Content.create({ sectionId: req.params.sectionId, title: req.params.sectionId, metadata: {} });
     }
     res.json(content);
@@ -28,14 +26,20 @@ router.get('/:sectionId', async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   try {
-    const content = await Content.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // Try by primary key first
+    let content = await Content.findByPk(req.params.id);
     if (!content) {
       // Try by sectionId
-      const bySection = await Content.findOneAndUpdate({ sectionId: req.params.id }, req.body, { new: true, upsert: true });
-      return res.json(bySection);
+      content = await Content.findOne({ where: { sectionId: req.params.id } });
     }
+    if (!content) {
+      content = await Content.create({ sectionId: req.params.id, ...req.body });
+      return res.json(content);
+    }
+    await content.update(req.body);
     res.json(content);
   } catch (err) {
+    console.error('Content update error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

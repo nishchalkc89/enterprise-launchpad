@@ -1,9 +1,11 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "This folder contains the complete backend code for THINK Acquisition.\r Copy this entire `server/` directory outside the frontend project and run it independently.",
-  "main": "seed.js",
+  "description": "THINK Acquisition Backend - MySQL/Sequelize",
+  "main": "server.cjs",
   "scripts": {
+    "start": "node server.cjs",
+    "seed": "node seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,8 +18,9 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.1",
     "multer": "^2.0.2",
-    "nodemailer": "^8.0.1"
+    "mysql2": "^3.11.0",
+    "nodemailer": "^8.0.1",
+    "sequelize": "^6.37.0"
   }
 }

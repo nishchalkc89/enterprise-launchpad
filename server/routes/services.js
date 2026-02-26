@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const services = await Service.find().sort('order');
+    const services = await Service.findAll({ order: [['order', 'ASC']] });
     res.json(services);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -23,7 +23,9 @@ router.post('/', auth, async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   try {
-    const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const service = await Service.findByPk(req.params.id);
+    if (!service) return res.status(404).json({ error: 'Not found' });
+    await service.update(req.body);
     res.json(service);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -32,7 +34,7 @@ router.put('/:id', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   try {
-    await Service.findByIdAndDelete(req.params.id);
+    await Service.destroy({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
