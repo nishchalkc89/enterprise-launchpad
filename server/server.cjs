@@ -1,8 +1,9 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+
+const sequelize = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
@@ -22,7 +23,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use("/uploads", express.static("uploads"));
 
 // Routes
 app.use('/api/admin', authRoutes);
@@ -39,9 +39,9 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Connect DB & Start
 const PORT = process.env.PORT || 5000;
-mongoose.connect(process.env.MONGO_URI)
+sequelize.sync()
   .then(() => {
-    console.log('MongoDB connected');
+    console.log('MySQL connected & tables synced');
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch(err => console.error('DB connection error:', err));

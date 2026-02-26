@@ -1,20 +1,17 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const nodemailer = require("nodemailer");
-const Submission = require("../models/Submission");
+const nodemailer = require('nodemailer');
+const Submission = require('../models/Submission');
 
-router.post("/", async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
+    console.log('Incoming form:', req.body);
 
-    console.log("Incoming form:", req.body);
-
-    // Save to MongoDB
     await Submission.create({ name, email, phone, message });
 
-    // Gmail SMTP Transporter
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
+      host: 'smtp.gmail.com',
       port: 465,
       secure: true,
       auth: {
@@ -23,11 +20,10 @@ router.post("/", async (req, res) => {
       },
     });
 
-    // Send Mail
     await transporter.sendMail({
       from: `"THINK Acquisition Website" <${process.env.EMAIL_USER}>`,
-      to: "nishchalkc370@gmail.com, sanjibsulu@gmail.com",
-      subject: "New Contact Form Submission",
+      to: 'nishchalkc370@gmail.com, sanjibsulu@gmail.com',
+      subject: 'New Contact Form Submission',
       html: `
         <h3>New Message Received</h3>
         <p><b>Name:</b> ${name}</p>
@@ -38,9 +34,8 @@ router.post("/", async (req, res) => {
     });
 
     res.json({ success: true });
-
   } catch (err) {
-    console.error("CONTACT ERROR:", err); // 🔴 IMPORTANT
+    console.error('CONTACT ERROR:', err);
     res.status(500).json({ error: err.message });
   }
 });
