@@ -17,15 +17,26 @@ const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 
-// Middleware
+
+// ================================
+// ✅ CORS FIX (LOCAL + LIVE)
+// ================================
 app.use(cors({
-  origin: ["http://localhost:8080", "http://localhost:5173"],
+  origin: true, // allow current domain automatically
   credentials: true
 }));
+
+
+// ================================
+// MIDDLEWARE
+// ================================
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+
+// ================================
+// ROUTES (NO CHANGE)
+// ================================
 app.use('/api/admin', authRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/contact', contactRoutes);
@@ -36,14 +47,27 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-// Connect DB & Start
+// ================================
+// HEALTH CHECK (IMPORTANT)
+// ================================
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+
+// ================================
+// START SERVER
+// ================================
 const PORT = process.env.PORT || 5000;
+
 sequelize.sync()
   .then(() => {
-    console.log('MySQL connected & tables synced');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    console.log('✅ MySQL connected & tables synced');
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
   })
-  .catch(err => console.error('DB connection error:', err));
+  .catch(err => {
+    console.error('❌ DB connection error:', err);
+  });
