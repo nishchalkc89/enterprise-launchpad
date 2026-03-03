@@ -1,6 +1,6 @@
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, resolveUploadUrl } from "@/lib/api";
 
 const defaultBullets = [
   "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
@@ -37,7 +37,7 @@ const AboutSection = () => {
   const description = content?.body || meta.description || `THINK Acquisition is a Service-Disabled Veteran-Owned Small Business dedicated to providing expert acquisition, program management, and technical consulting services. We partner with federal agencies to deliver efficient, compliant, and high-quality solutions.`;
   const bullets = meta.bullets && meta.bullets.length > 0 ? meta.bullets : defaultBullets;
   const stats = meta.stats && meta.stats.length > 0 ? meta.stats : defaultStats;
-  const imageUrl = meta.imageUrl || "/business.png";
+  const imageUrl = resolveUploadUrl(meta.imageUrl) || "/business.png";
 
   return (
     <section id="about" className="relative py-16 bg-background overflow-hidden scroll-mt-24">

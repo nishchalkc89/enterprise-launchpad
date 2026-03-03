@@ -1,4 +1,12 @@
 export const API_BASE = "https://api.foxnutfusion.com/api";
+export const API_ORIGIN = "https://api.foxnutfusion.com";
+
+export const resolveUploadUrl = (url: string | undefined): string => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/")) return `${API_ORIGIN}${url}`;
+  return url;
+};
 
 const isFormDataBody = (body: BodyInit | null | undefined) =>
   typeof FormData !== "undefined" && body instanceof FormData;
