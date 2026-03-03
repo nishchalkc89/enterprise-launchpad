@@ -51,17 +51,21 @@ const ContactSection = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("https://api.foxnutfusion.com/api/submit-message", {
+      const res = await apiFetch("/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (res.ok) {
+
+      if (res?.success) {
+        if (res.emailSent === false) {
+          console.error("Email delivery failed:", res.emailError);
+          alert("Message saved, but email notification failed. Please check server logs.");
+        }
         setSubmitted(true);
         setTimeout(() => setSubmitted(false), 4000);
         setForm({ name: "", email: "", phone: "", message: "" });
       } else {
-        alert("Server error");
+        alert(res?.error || "Server error");
       }
     } catch (err) {
       console.error(err);
