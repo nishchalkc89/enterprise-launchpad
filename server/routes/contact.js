@@ -39,11 +39,12 @@ router.post('/', async (req, res) => {
 
         console.log('Email sent successfully');
       } catch (mailErr) {
-        console.log('Email failed but form saved:', mailErr.message);
+      console.error('Email failed but form saved:', mailErr.message, mailErr.stack);
+      return res.json({ success: true, emailSent: false, emailError: mailErr.message });
       }
     }
 
-    res.json({ success: true });
+    res.json({ success: true, emailSent: true });
   } catch (err) {
     console.error('CONTACT ERROR:', err);
     res.status(500).json({ error: err.message });
