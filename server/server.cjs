@@ -63,6 +63,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/admin', authRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/submit-message', contactRoutes); // backward compatibility for older frontend builds
 app.use('/api/services', serviceRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/submissions', submissionRoutes);
