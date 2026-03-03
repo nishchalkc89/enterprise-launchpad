@@ -51,15 +51,28 @@ const ContactSection = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await apiFetch("/contact", {
+      let res = await apiFetch("/contact", {
         method: "POST",
         body: JSON.stringify(form),
       });
 
+      // Backward compatibility for older API deployments
+      if (typeof res?.error === "string" && res.error.includes("Cannot POST /api/contact")) {
+        res = await apiFetch("/submit-message", {
+          method: "POST",
+          body: JSON.stringify(form),
+        });
+      }
+
+      const emailFailed =
+        res?.emailSent === false ||
+        String(res?.email_status || "").toLowerCase() === "failed";
+
       if (res?.success) {
-        if (res.emailSent === false) {
-          console.error("Email delivery failed:", res.emailError);
-          alert("Message saved, but email notification failed. Please check server logs.");
+        if (emailFailed) {
+          const message = res?.emailError || res?.email_error || "Unknown email error";
+          console.error("Email delivery failed:", message);
+          alert(`Message saved, but email notification failed: ${message}`);
         }
         setSubmitted(true);
         setTimeout(() => setSubmitted(false), 4000);
