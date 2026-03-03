@@ -19,12 +19,35 @@ const app = express();
 
 
 // ================================
-// ✅ CORS FIX (LOCAL + LIVE)
+// ✅ CORS (PREVIEW + PRODUCTION + LOCAL)
 // ================================
-app.use(cors({
-  origin: true, // allow current domain automatically
-  credentials: true
-}));
+const allowedOriginPatterns = [
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/(www\.)?foxnutfusion\.com$/,
+  /^https:\/\/api\.foxnutfusion\.com$/,
+  /^http:\/\/localhost:\d+$/,
+  /^https:\/\/localhost:\d+$/,
+];
+
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser clients (curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const isAllowed = allowedOriginPatterns.some((pattern) => pattern.test(origin));
+    if (isAllowed) return callback(null, true);
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 
 // ================================
