@@ -22,7 +22,7 @@ const ContactSection = () => {
     const load = () => {
       apiFetch("/content/contact").then((data) => {
         if (data && !data.error) setContactData(data);
-      }).catch(() => {});
+      }).catch(() => { });
     };
     load();
     const interval = setInterval(load, 5000);
@@ -51,7 +51,7 @@ const ContactSection = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5000/api/contact", {
+      const res = await fetch("https://api.foxnutfusion.com/api/submit-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

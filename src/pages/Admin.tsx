@@ -809,7 +809,7 @@ const MediaPanel = () => {
 
   const loadMedia = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/media");
+      const res = await fetch("https://api.foxnutfusion.com/api/media");
       const data = await res.json();
       setFiles(data || []);
     } catch { }
@@ -846,7 +846,7 @@ const MediaPanel = () => {
       const formData = new FormData();
       formData.append("file", file);
       try {
-        await fetch("http://localhost:5000/api/media", {
+        await fetch("https://api.foxnutfusion.com/api/media", {
           method: "POST",
           headers: {
             ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
@@ -861,7 +861,7 @@ const MediaPanel = () => {
 
   const handleRemove = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/media/${id}`, {
+      await fetch(`https://api.foxnutfusion.com/api/media/${id}`, {
         method: "DELETE",
         headers: {
           ...(localStorage.getItem("token") ? { Authorization: `Bearer ${localStorage.getItem("token")}` } : {}),
@@ -909,7 +909,7 @@ const MediaPanel = () => {
             className="relative aspect-square rounded-xl border border-border overflow-hidden group"
           >
             <img
-              src={`http://localhost:5000${item.url}`}
+              src={`https://api.foxnutfusion.com${item.url}`}
               className="w-full h-full object-cover"
             />
             <button
