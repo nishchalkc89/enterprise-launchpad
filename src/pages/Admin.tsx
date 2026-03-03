@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_BASE } from "@/lib/api";
 
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -16,13 +16,14 @@ import {
   Trash2,
   Plus,
   ChevronRight,
+  Upload,
 } from "lucide-react";
 
 // ===== VALIDATION HELPERS =====
 const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
 const isYouTubeEmbed = (url: string) => {
-  if (!url) return true; // empty is ok
+  if (!url) return true;
   return /^https?:\/\/(www\.)?youtube\.com\/embed\//.test(url.trim());
 };
 
@@ -33,19 +34,151 @@ const ICON_OPTIONS = [
 
 const MAX_SERVICES = 6;
 const MAX_BADGES = 3;
+const TITLE_MIN_CHARS = 5;
+const DESC_MIN_WORDS = 50;
 const HERO_PARA_MIN_WORDS = 70;
 const HERO_PARA_MAX_WORDS = 80;
+const ABOUT_DESC_MIN_WORDS = 50;
 const ABOUT_DESC_MAX_WORDS = 80;
-const HEADING_MIN_WORDS = 4;
-const HEADING_MAX_WORDS = 5;
 const ABOUT_MAX_BULLETS = 5;
 const ABOUT_BULLET_MAX_CHARS = 60;
 const ABOUT_MAX_STATS = 4;
 const SERVICE_TITLE_MAX = 40;
 const SERVICE_DESC_MAX = 110;
+
+const IMAGE_MAX_SIZE_MB = 2;
+const IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/svg+xml", "image/webp"];
+const IMAGE_ALLOWED_EXTS = ".jpg,.jpeg,.png,.svg,.webp";
+
 const MEDIA_MAX_SIZE_MB = 2;
-const MEDIA_ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "video/mp4"];
-const MEDIA_ALLOWED_EXTS = ".jpg,.jpeg,.png,.webp,.mp4";
+const MEDIA_ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/svg+xml", "video/mp4"];
+const MEDIA_ALLOWED_EXTS = ".jpg,.jpeg,.png,.svg,.webp,.mp4";
+
+// ===== SECTION DEFAULTS (prefill when DB is empty) =====
+const SECTION_DEFAULTS: Record<string, any> = {
+  hero: {
+    title: "Strategic Solutions Proven Results",
+    body: "THINK Acquisition delivers expert acquisition support, program management, and technical consulting services to federal agencies and defense organizations. Our team of seasoned professionals brings decades of combined experience in government contracting, ensuring mission success through strategic planning, compliant execution, and innovative solutions. We are committed to delivering measurable results for our clients across the Department of Defense, civilian agencies, and intelligence community, providing responsive support and unwavering dedication to excellence in every engagement.",
+    metadata: {
+      badgeText: "Government Contracting Excellence",
+      headingLine1: "Strategic Solutions.",
+      headingHighlight: "Proven Results.",
+      buttonPrimaryText: "Get Started",
+      buttonSecondaryText: "Our Services",
+      videoUrl: "https://www.youtube.com/embed/rdJ38az0U0A?autoplay=1&mute=1&loop=1&playlist=rdJ38az0U0A&controls=1&modestbranding=1",
+      badges: ["Government Cleared", "Mission Focused", "Rapid Delivery"],
+    },
+  },
+  about: {
+    title: "Mission-Driven. Results-Oriented.",
+    body: "THINK Acquisition is a Service-Disabled Veteran-Owned Small Business dedicated to providing expert acquisition, program management, and technical consulting services to federal agencies and defense organizations. We partner with government clients to deliver efficient, compliant, and high-quality solutions that drive mission success across defense and civilian operations nationwide, leveraging our deep expertise and proven methodologies to ensure every project meets the highest standards of excellence and accountability.",
+    metadata: {
+      bullets: [
+        "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
+        "Proven track record with DoD and federal civilian agencies",
+        "CAGE: 89VE7 | UEI: M2M1NJSDFP3",
+        "Experienced team of acquisition professionals",
+      ],
+      stats: [
+        { num: "26+", label: "Years Experience" },
+        { num: "50+", label: "Contracts Delivered" },
+        { num: "100%", label: "Client Satisfaction" },
+        { num: "24/7", label: "Mission Support" },
+      ],
+      imageUrl: "/business.png",
+    },
+  },
+  services: {
+    title: "Core Services & Capabilities",
+    body: "Delivering mission-critical acquisition and consulting solutions across the federal landscape. Our comprehensive service portfolio supports defense and civilian agencies with expert guidance throughout the entire acquisition lifecycle, from strategic planning and requirements development through solicitation preparation, source selection, contract administration, and performance optimization. We bring proven methodologies and experienced professionals to ensure successful outcomes for every program.",
+  },
+  contact: {
+    title: "Contact Us",
+    body: "Get in touch with our team of acquisition professionals to discuss how THINK Acquisition can support your federal contracting needs. We are committed to providing responsive, expert guidance for all your acquisition, program management, and technical consulting requirements across defense and civilian agencies. Our dedicated team is ready to help you navigate complex procurement challenges, ensure regulatory compliance, and achieve mission success through proven strategies and collaborative partnerships.",
+    metadata: {
+      pocName: "William Randolph",
+      phone: "(703) 819-6192",
+      email: "william@thinkacquisition.net",
+      website: "www.thinkacquisition.net",
+      address: "25 Castle Haven Road, Hampton, VA 23666",
+      cage: "89VE7",
+      uei: "M2M1NJSDFP3",
+      socioEconomicStatus: "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
+      naicsCodes: ["541611", "541612", "541614", "541618", "541690", "541990", "561110", "611430"],
+    },
+  },
+};
+
+// ===== FILE UPLOAD HELPER =====
+const uploadFile = async (file: File): Promise<string | null> => {
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await apiFetch("/upload", { method: "POST", body: fd });
+    return res?.url || null;
+  } catch { return null; }
+};
+
+const resolveMediaUrl = (url: string) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/")) return `https://api.foxnutfusion.com${url}`;
+  return url;
+};
+
+// ===== IMAGE UPLOAD FIELD =====
+const ImageUploadField = ({
+  label, value, onChange, recommended, error,
+}: {
+  label: string; value: string; onChange: (url: string) => void; recommended: string; error?: string;
+}) => {
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(value);
+  useEffect(() => setPreview(value), [value]);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > IMAGE_MAX_SIZE_MB * 1024 * 1024) {
+      alert(`File exceeds ${IMAGE_MAX_SIZE_MB}MB limit`);
+      return;
+    }
+    if (!IMAGE_ALLOWED_TYPES.includes(file.type)) {
+      alert("Allowed formats: JPG, JPEG, PNG, SVG, WebP");
+      return;
+    }
+    setUploading(true);
+    const url = await uploadFile(file);
+    if (url) {
+      onChange(url);
+      setPreview(resolveMediaUrl(url));
+    } else {
+      alert("Upload failed. Please try again.");
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
+  const displayPreview = resolveMediaUrl(preview);
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</label>
+      <p className="text-xs text-muted-foreground">Recommended: {recommended} · Max {IMAGE_MAX_SIZE_MB}MB · JPG, PNG, SVG, WebP</p>
+      <div className={`flex items-center gap-4 p-3 rounded-xl border ${error ? 'border-red-500' : 'border-border'} bg-muted`}>
+        {displayPreview && (
+          <img src={displayPreview} alt="Preview" className="w-16 h-16 object-cover rounded-lg border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        )}
+        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ background: "#facc15", color: "#1E3A8A" }}>
+          <Upload size={14} />
+          {uploading ? "Uploading..." : "Choose File"}
+          <input type="file" hidden accept={IMAGE_ALLOWED_EXTS} onChange={handleFile} disabled={uploading} />
+        </label>
+      </div>
+      {error && <p data-validation-error="image" className="text-xs mt-1" style={{ color: "#ef4444" }}>⚠ {error}</p>}
+    </div>
+  );
+};
 
 // ============ LOGIN ============
 const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
@@ -339,8 +472,18 @@ const ContentPanel = () => {
   }, []);
 
   const openEditor = (section: any) => {
+    const defaults = SECTION_DEFAULTS[section.sectionId] || {};
+    const merged = {
+      ...section,
+      title: section.title || defaults.title || "",
+      body: section.body || defaults.body || "",
+      metadata: {
+        ...(defaults.metadata || {}),
+        ...(section.metadata || {}),
+      },
+    };
     setActiveSection(section);
-    setFormData({ ...section, metadata: { ...(section.metadata || {}) } });
+    setFormData(merged);
     setValidationErrors({});
   };
 
@@ -357,18 +500,15 @@ const ContentPanel = () => {
     if (!activeSection) return true;
     const sid = activeSection.sectionId;
 
-    // Heading validation (applies to hero & about)
-    if (sid === "hero" || sid === "about") {
-      const titleWc = countWords(formData.title || "");
-      if (titleWc < HEADING_MIN_WORDS || titleWc > HEADING_MAX_WORDS) {
-        errors.headingWords = `Heading must be ${HEADING_MIN_WORDS}–${HEADING_MAX_WORDS} words (currently ${titleWc})`;
-      }
+    // Title: min 5 characters (all sections)
+    if (formData.title && formData.title.trim().length < TITLE_MIN_CHARS) {
+      errors.titleMin = `Title must be at least ${TITLE_MIN_CHARS} characters`;
     }
 
     if (sid === "hero") {
       const wc = countWords(formData.body || "");
-      if (wc < HERO_PARA_MIN_WORDS) errors.heroParagraph = `Minimum ${HERO_PARA_MIN_WORDS} words required (currently ${wc})`;
-      if (wc > HERO_PARA_MAX_WORDS) errors.heroParagraph = `Maximum ${HERO_PARA_MAX_WORDS} words allowed (currently ${wc})`;
+      if (wc < HERO_PARA_MIN_WORDS) errors.bodyWords = `Minimum ${HERO_PARA_MIN_WORDS} words required (currently ${wc})`;
+      if (wc > HERO_PARA_MAX_WORDS) errors.bodyWords = `Maximum ${HERO_PARA_MAX_WORDS} words allowed (currently ${wc})`;
       const videoUrl = formData.metadata?.videoUrl || "";
       if (videoUrl && !isYouTubeEmbed(videoUrl)) errors.heroVideo = "Must be a YouTube embed URL (https://youtube.com/embed/...)";
       const badges = formData.metadata?.badges || [];
@@ -377,7 +517,8 @@ const ContentPanel = () => {
 
     if (sid === "about") {
       const wc = countWords(formData.body || "");
-      if (wc > ABOUT_DESC_MAX_WORDS) errors.aboutDesc = `Maximum ${ABOUT_DESC_MAX_WORDS} words allowed (currently ${wc})`;
+      if (wc < ABOUT_DESC_MIN_WORDS) errors.bodyWords = `Minimum ${ABOUT_DESC_MIN_WORDS} words required (currently ${wc})`;
+      if (wc > ABOUT_DESC_MAX_WORDS) errors.bodyWords = `Maximum ${ABOUT_DESC_MAX_WORDS} words allowed (currently ${wc})`;
       const bullets = formData.metadata?.bullets || [];
       if (bullets.length > ABOUT_MAX_BULLETS) errors.aboutBullets = `Maximum ${ABOUT_MAX_BULLETS} bullets allowed`;
       bullets.forEach((b: string, i: number) => {
@@ -387,9 +528,18 @@ const ContentPanel = () => {
       if (stats.length > ABOUT_MAX_STATS) errors.aboutStats = `Maximum ${ABOUT_MAX_STATS} stat cards allowed`;
     }
 
+    if (sid === "services") {
+      const wc = countWords(formData.body || "");
+      if (wc < DESC_MIN_WORDS) errors.bodyWords = `Minimum ${DESC_MIN_WORDS} words required (currently ${wc})`;
+    }
+
+    if (sid === "contact") {
+      const wc = countWords(formData.body || "");
+      if (wc < DESC_MIN_WORDS) errors.bodyWords = `Minimum ${DESC_MIN_WORDS} words required (currently ${wc})`;
+    }
+
     setValidationErrors(errors);
     if (Object.keys(errors).length > 0) {
-      // Scroll to first error
       setTimeout(() => {
         const firstErr = formRef.current?.querySelector('[data-validation-error]');
         firstErr?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -451,8 +601,16 @@ const ContentPanel = () => {
     const meta = formData.metadata || {};
     const bodyWords = countWords(formData.body || "");
     const badges = meta.badges || [];
+    const titleLen = (formData.title || "").trim().length;
     return (
       <>
+        <ImageUploadField
+          label="Background Image"
+          value={meta.backgroundImage || ""}
+          onChange={(url) => updateMeta("backgroundImage", url)}
+          recommended="1920×1080px"
+        />
+
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Badge Text</label>
         <input value={meta.badgeText || ""} onChange={(e) => updateMeta("badgeText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Government Contracting Excellence" />
 
@@ -462,23 +620,23 @@ const ContentPanel = () => {
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Heading Highlight</label>
         <input value={meta.headingHighlight || ""} onChange={(e) => updateMeta("headingHighlight", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="Proven Results." />
 
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title (4–5 words)</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title (min {TITLE_MIN_CHARS} chars)</label>
         <input
           value={formData.title || ""}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.headingWords ? 'border-red-500' : 'border-border'}`}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.titleMin ? 'border-red-500' : 'border-border'}`}
           placeholder="Strategic Solutions Proven Results"
         />
-        <p className={`text-xs font-medium ${validationErrors.headingWords ? 'text-red-500' : 'text-muted-foreground'}`}>
-          {countWords(formData.title || "")} / {HEADING_MIN_WORDS}–{HEADING_MAX_WORDS} words
+        <p className={`text-xs font-medium ${titleLen < TITLE_MIN_CHARS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {titleLen} characters {titleLen < TITLE_MIN_CHARS ? `(min ${TITLE_MIN_CHARS})` : '✓'}
         </p>
-        <ValidationMsg error={validationErrors.headingWords} id="headingWords" />
+        <ValidationMsg error={validationErrors.titleMin} id="titleMin" />
 
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paragraph</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paragraph ({HERO_PARA_MIN_WORDS}–{HERO_PARA_MAX_WORDS} words)</label>
         <textarea
           value={formData.body || ""}
           onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.heroParagraph ? 'border-red-500' : 'border-border'}`}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.bodyWords ? 'border-red-500' : 'border-border'}`}
           rows={3}
         />
         <div className="flex items-center justify-between">
@@ -487,7 +645,7 @@ const ContentPanel = () => {
             {bodyWords} / {HERO_PARA_MIN_WORDS}–{HERO_PARA_MAX_WORDS} words
           </p>
         </div>
-        <ValidationMsg error={validationErrors.heroParagraph} id="heroParagraph" />
+        <ValidationMsg error={validationErrors.bodyWords} id="bodyWords" />
 
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Primary Button Text</label>
         <input value={meta.buttonPrimaryText || ""} onChange={(e) => updateMeta("buttonPrimaryText", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
@@ -529,20 +687,21 @@ const ContentPanel = () => {
     const bodyWords = countWords(formData.body || "");
     const bullets = meta.bullets || [];
     const stats = meta.stats || [];
+    const titleLen = (formData.title || "").trim().length;
     return (
       <>
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title (4–5 words)</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title (min {TITLE_MIN_CHARS} chars)</label>
         <input
           value={formData.title || ""}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.headingWords ? 'border-red-500' : 'border-border'}`}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.titleMin ? 'border-red-500' : 'border-border'}`}
         />
-        <p className={`text-xs font-medium ${validationErrors.headingWords ? 'text-red-500' : 'text-muted-foreground'}`}>
-          {countWords(formData.title || "")} / {HEADING_MIN_WORDS}–{HEADING_MAX_WORDS} words
+        <p className={`text-xs font-medium ${titleLen < TITLE_MIN_CHARS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {titleLen} characters {titleLen < TITLE_MIN_CHARS ? `(min ${TITLE_MIN_CHARS})` : '✓'}
         </p>
-        <ValidationMsg error={validationErrors.headingWords} id="headingWords" />
+        <ValidationMsg error={validationErrors.titleMin} id="titleMin" />
 
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description (70–80 words)</label>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description ({ABOUT_DESC_MIN_WORDS}–{ABOUT_DESC_MAX_WORDS} words)</label>
         <textarea
           value={formData.body || ""}
           onChange={(e) => {
@@ -550,17 +709,16 @@ const ContentPanel = () => {
             if (words.length <= ABOUT_DESC_MAX_WORDS) {
               setFormData({ ...formData, body: e.target.value });
             } else {
-              // Auto trim to max words
               setFormData({ ...formData, body: words.slice(0, ABOUT_DESC_MAX_WORDS).join(" ") });
             }
           }}
-          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.aboutDesc ? 'border-red-500' : 'border-border'}`}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.bodyWords ? 'border-red-500' : 'border-border'}`}
           rows={4}
         />
-        <p className={`text-xs font-medium ${bodyWords > ABOUT_DESC_MAX_WORDS ? 'text-red-500' : 'text-muted-foreground'}`}>
-          {bodyWords} / {ABOUT_DESC_MAX_WORDS} words
+        <p className={`text-xs font-medium ${bodyWords < ABOUT_DESC_MIN_WORDS || bodyWords > ABOUT_DESC_MAX_WORDS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {bodyWords} / {ABOUT_DESC_MIN_WORDS}–{ABOUT_DESC_MAX_WORDS} words
         </p>
-        <ValidationMsg error={validationErrors.aboutDesc} id="aboutDesc" />
+        <ValidationMsg error={validationErrors.bodyWords} id="bodyWords" />
 
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Bullets (one per line) — {bullets.length}/{ABOUT_MAX_BULLETS} max, {ABOUT_BULLET_MAX_CHARS} chars each
@@ -578,9 +736,12 @@ const ContentPanel = () => {
         />
         <ValidationMsg error={validationErrors.aboutBullets} id="aboutBullets" />
 
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Image URL</label>
-        <input value={meta.imageUrl || ""} onChange={(e) => updateMeta("imageUrl", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" placeholder="/business.png" />
-        <p className="text-xs text-muted-foreground">Recommended ratio 4:5, max height 640px</p>
+        <ImageUploadField
+          label="About Image"
+          value={meta.imageUrl || ""}
+          onChange={(url) => updateMeta("imageUrl", url)}
+          recommended="800×600px"
+        />
 
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Stats — {stats.length}/{ABOUT_MAX_STATS} max
@@ -600,66 +761,117 @@ const ContentPanel = () => {
     );
   };
 
-  const renderServicesFields = () => (
-    <>
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title</label>
-      <input value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Description</label>
-      <textarea value={formData.body || ""} onChange={(e) => setFormData({ ...formData, body: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" rows={2} />
-      <div className="border-t border-border pt-4 mt-2">
-        <div className="flex items-center justify-between mb-3">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Service Cards — {servicesList.length}/{MAX_SERVICES}
-          </label>
-          <button
-            onClick={addService}
-            disabled={servicesList.length >= MAX_SERVICES}
-            style={{ background: servicesList.length >= MAX_SERVICES ? "#94a3b8" : "#facc15", color: "#1E3A8A" }}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"
-          >
-            <Plus size={12} /> Add Service
-          </button>
-        </div>
-        <div className="space-y-3">
-          {servicesList.map((svc) => (
-            <div key={svc._id} className="p-4 rounded-xl bg-muted/50 border border-border space-y-2">
-              <div className="flex gap-2 flex-col sm:flex-row">
-                <div className="flex-1">
-                  <input
-                    value={svc.title}
-                    maxLength={SERVICE_TITLE_MAX}
-                    onChange={(e) => updateService(svc._id, { ...svc, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm"
-                    placeholder="Title"
-                  />
-                  <p className="text-xs text-muted-foreground mt-0.5 text-right">{(svc.title || "").length}/{SERVICE_TITLE_MAX}</p>
+  const renderServicesFields = () => {
+    const bodyWords = countWords(formData.body || "");
+    const titleLen = (formData.title || "").trim().length;
+    return (
+      <>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title (min {TITLE_MIN_CHARS} chars)</label>
+        <input
+          value={formData.title || ""}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.titleMin ? 'border-red-500' : 'border-border'}`}
+        />
+        <p className={`text-xs font-medium ${titleLen < TITLE_MIN_CHARS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {titleLen} characters {titleLen < TITLE_MIN_CHARS ? `(min ${TITLE_MIN_CHARS})` : '✓'}
+        </p>
+        <ValidationMsg error={validationErrors.titleMin} id="titleMin" />
+
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Description (min {DESC_MIN_WORDS} words)</label>
+        <textarea
+          value={formData.body || ""}
+          onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.bodyWords ? 'border-red-500' : 'border-border'}`}
+          rows={3}
+        />
+        <p className={`text-xs font-medium ${bodyWords < DESC_MIN_WORDS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {bodyWords} / {DESC_MIN_WORDS} words min
+        </p>
+        <ValidationMsg error={validationErrors.bodyWords} id="bodyWords" />
+
+        <div className="border-t border-border pt-4 mt-2">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Service Cards — {servicesList.length}/{MAX_SERVICES}
+            </label>
+            <button
+              onClick={addService}
+              disabled={servicesList.length >= MAX_SERVICES}
+              style={{ background: servicesList.length >= MAX_SERVICES ? "#94a3b8" : "#facc15", color: "#1E3A8A" }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"
+            >
+              <Plus size={12} /> Add Service
+            </button>
+          </div>
+          <div className="space-y-3">
+            {servicesList.map((svc) => (
+              <div key={svc._id} className="p-4 rounded-xl bg-muted/50 border border-border space-y-2">
+                <div className="flex gap-2 flex-col sm:flex-row">
+                  <div className="flex-1">
+                    <input
+                      value={svc.title}
+                      maxLength={SERVICE_TITLE_MAX}
+                      onChange={(e) => updateService(svc._id, { ...svc, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm"
+                      placeholder="Title"
+                    />
+                    <p className="text-xs text-muted-foreground mt-0.5 text-right">{(svc.title || "").length}/{SERVICE_TITLE_MAX}</p>
+                  </div>
+                  <select value={svc.icon || "Briefcase"} onChange={(e) => updateService(svc._id, { ...svc, icon: e.target.value })} className="px-3 py-2 rounded-lg bg-muted border border-border text-sm">
+                    {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+                  </select>
                 </div>
-                <select value={svc.icon || "Briefcase"} onChange={(e) => updateService(svc._id, { ...svc, icon: e.target.value })} className="px-3 py-2 rounded-lg bg-muted border border-border text-sm">
-                  {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
-                </select>
+                <div>
+                  <textarea
+                    value={svc.description}
+                    maxLength={SERVICE_DESC_MAX}
+                    onChange={(e) => updateService(svc._id, { ...svc, description: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm"
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{(svc.description || "").length}/{SERVICE_DESC_MAX}</p>
+                </div>
+                <button onClick={() => deleteService(svc._id)} className="text-red-500 text-xs font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
               </div>
-              <div>
-                <textarea
-                  value={svc.description}
-                  maxLength={SERVICE_DESC_MAX}
-                  onChange={(e) => updateService(svc._id, { ...svc, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm"
-                  rows={2}
-                />
-                <p className="text-xs text-muted-foreground text-right">{(svc.description || "").length}/{SERVICE_DESC_MAX}</p>
-              </div>
-              <button onClick={() => deleteService(svc._id)} className="text-red-500 text-xs font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderContactFields = () => {
     const meta = formData.metadata || {};
+    const bodyWords = countWords(formData.body || "");
+    const titleLen = (formData.title || "").trim().length;
     return (
       <>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Title (min {TITLE_MIN_CHARS} chars)</label>
+        <input
+          value={formData.title || ""}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.titleMin ? 'border-red-500' : 'border-border'}`}
+        />
+        <p className={`text-xs font-medium ${titleLen < TITLE_MIN_CHARS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {titleLen} characters {titleLen < TITLE_MIN_CHARS ? `(min ${TITLE_MIN_CHARS})` : '✓'}
+        </p>
+        <ValidationMsg error={validationErrors.titleMin} id="titleMin" />
+
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section Description (min {DESC_MIN_WORDS} words)</label>
+        <textarea
+          value={formData.body || ""}
+          onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+          className={`w-full px-4 py-3 rounded-xl bg-muted border ${validationErrors.bodyWords ? 'border-red-500' : 'border-border'}`}
+          rows={3}
+        />
+        <p className={`text-xs font-medium ${bodyWords < DESC_MIN_WORDS ? 'text-red-500' : 'text-muted-foreground'}`}>
+          {bodyWords} / {DESC_MIN_WORDS} words min
+        </p>
+        <ValidationMsg error={validationErrors.bodyWords} id="bodyWords" />
+
+        <div className="border-t border-border pt-4 mt-2">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Corporate Information</label>
+        </div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">POC Name</label>
         <input value={meta.pocName || ""} onChange={(e) => updateMeta("pocName", e.target.value)} className="w-full px-4 py-3 rounded-xl bg-muted border border-border" />
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Phone</label>
@@ -826,7 +1038,7 @@ const MediaPanel = () => {
       return `File "${file.name}" exceeds ${MEDIA_MAX_SIZE_MB}MB limit.`;
     }
     if (!MEDIA_ALLOWED_TYPES.includes(file.type)) {
-      return `File "${file.name}" has unsupported format. Allowed: jpg, png, webp, mp4.`;
+      return `File "${file.name}" has unsupported format. Allowed: JPG, PNG, SVG, WebP, MP4.`;
     }
     return null;
   };
@@ -899,7 +1111,7 @@ const MediaPanel = () => {
       )}
 
       <p className="text-xs text-muted-foreground mb-4">
-        Max file size: {MEDIA_MAX_SIZE_MB}MB · Formats: JPG, PNG, WebP, MP4 · Recommended max: 1600×1200px
+        Max file size: {MEDIA_MAX_SIZE_MB}MB · Formats: JPG, PNG, SVG, WebP, MP4 · Recommended max: 1600×1200px
       </p>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -950,7 +1162,6 @@ const SettingsPanel = () => {
   };
 
   const handleSave = async () => {
-    // Prevent empty overwrites
     const requiredFields = ["companyName", "pocName", "phone", "email"];
     for (const f of requiredFields) {
       if (!form[f]?.trim()) {
@@ -994,6 +1205,31 @@ const SettingsPanel = () => {
             />
           </div>
         ))}
+
+        <div className="border-t border-border pt-6 space-y-6">
+          <h3 className="font-display text-lg font-semibold text-foreground">Site Images</h3>
+
+          <ImageUploadField
+            label="Company Logo"
+            value={form.logoUrl || "/logo.png"}
+            onChange={(url) => handleChange("logoUrl", url)}
+            recommended="300×100px"
+          />
+
+          <ImageUploadField
+            label="Favicon"
+            value={form.faviconUrl || "/favicon.png"}
+            onChange={(url) => handleChange("faviconUrl", url)}
+            recommended="64×64px"
+          />
+
+          <ImageUploadField
+            label="Business Image"
+            value={form.businessImageUrl || "/business.png"}
+            onChange={(url) => handleChange("businessImageUrl", url)}
+            recommended="800×600px"
+          />
+        </div>
 
         <button
           onClick={handleSave}
